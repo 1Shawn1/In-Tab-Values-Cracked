@@ -1,8 +1,0 @@
-Step 1: Download the .zip and extract the folder to somewhere on your computer (Desktop/Documents/Doesn't matter just remember where)
-Step 2: Open up google chrome
-Step 3: put this in your search bar: chrome://extensions/
-Step 4: Enable Developer mode which should be on the top right: https://i.imgur.com/6l9xN3j.png
-Step 5: Press load unpacked: https://i.imgur.com/flAK8WA.png
-Step 6: Navigate to where you put the folder that you got out of the .zip
-Step 7: Press select folder once you're inside the folder: https://i.imgur.com/2wf4nDx.png
-Step 8: Done, enjoy In-Tab-Values for free! : https://i.imgur.com/KEygFAN.png
