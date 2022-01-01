@@ -91,10 +91,10 @@ async function addITVIcon(tabId) {
             a.appendChild(icon)
             box.insertBefore(li, document.getElementById("navbar-settings"))
 
-            $(icon).hover(function() {
+            $(icon).hover(function () {
                 $(this).css("box-shadow", "0 0 0 2px WhiteSmoke");
 
-            }, function() {
+            }, function () {
                 $(this).css("box-shadow", "0 0 0 0px WhiteSmoke");
 
             });
@@ -103,12 +103,16 @@ async function addITVIcon(tabId) {
     }
 }
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+async function CheckSubscription() {
+   return true
+}
+
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.command == "test") {
         sendResponse(true);
     }
     if (request.command == "refresh") {
-        setTimeout(function() {
+        setTimeout(function () {
             window.location.reload()
             sendResponse();
         }, 500)
@@ -135,47 +139,52 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
 
     if (request.command == "prompt_purchase") {
-        function prompt_purchase() {
+        async function prompt_purchase() {
             window.removeEventListener("load", prompt_purchase);
             let pageURL = document.URL
-            if (pageURL.indexOf("roblox.com/games/4872321990") != -1) {
-                let element = document.getElementsByClassName('rbx-private-server-create-button')[1]
-                element.click();
+            if (pageURL.indexOf("roblox.com/games/7466730072") != -1 && await CheckSubscription() === false) {
+                if (document.getElementById("modal-dialog2") == undefined) {
+                    let element = document.getElementsByClassName('rbx-private-server-create-button')[1]
+                    element.click();
 
-                setTimeout(function() {
-                    if (document.getElementById("modal-dialog2") == undefined) {
-                        let url = chrome.runtime.getURL("server-purchase-popup.html");
+                    setTimeout(function () {
+                        if (document.getElementById("modal-dialog2") == undefined) {
+                            let url = chrome.runtime.getURL("server-purchase-popup.html");
 
-                        $.get(url, function(data) {
-                            if (document.getElementById("modal-dialog2") == undefined) {
-                                document.getElementById("modal-dialog").parentElement.insertAdjacentHTML("beforeend", data)
-                                let element = document.getElementById("modal-dialog2")
-                                element.style.backgroundColor = realBackgroundColor(document.getElementById("modal-dialog").getElementsByClassName("modal-header")[0])
-                                element.getElementsByClassName("transparent-logo")[0].src = icons["transparent-logo-with-sub-text"]
-                                element.getElementsByClassName("discord-box-img")[0].src = icons["discord"]
-                                if (darkMode() == false) {
-                                    element.getElementsByClassName("transparent-logo")[0].style.webkitFilter = "brightness(0.15)"
+                            $.get(url, function (data) {
+                                if (document.getElementById("modal-dialog2") == undefined) {
+                                    document.getElementById("modal-dialog").parentElement.insertAdjacentHTML("beforeend", data)
+                                    let element = document.getElementById("modal-dialog2")
+                                    element.style.backgroundColor = realBackgroundColor(document.getElementById("modal-dialog").getElementsByClassName("modal-header")[0])
+                                    element.getElementsByClassName("transparent-logo")[0].src = icons["transparent-logo-with-sub-text"]
+                                    element.getElementsByClassName("discord-box-img")[0].src = icons["discord"]
+                                    if (darkMode() == false) {
+                                        element.getElementsByClassName("transparent-logo")[0].style.webkitFilter = "brightness(0.15)"
+                                    }
+                                    setTimeout(function () {
+                                        document.getElementById("modal-confirmation").getElementsByClassName('form-control input-field private-server-name')[0].value = "ITV";
+                                    }, 500)
+
+                                    let buyButton = document.getElementById('confirm-btn')
+                                    buyButton.onclick = function () {
+                                        setTimeout(function () {
+                                            chrome.runtime.sendMessage({ command: "purchased" }, function (response) { });
+                                            window.location.replace("https://www.roblox.com/trades")
+                                        }, 1000)
+                                    }
                                 }
 
-
-                                setTimeout(function() {
-                                    document.getElementById("modal-confirmation").getElementsByClassName('form-control input-field private-server-name')[0].value = "ITV";
-                                }, 500)
-
-                                let buyButton = document.getElementById('confirm-btn')
-                                buyButton.onclick = function() {
-                                    setTimeout(function() {
-                                        chrome.runtime.sendMessage({ command: "purchased" }, function(response) {});
-                                        window.location.replace("https://www.roblox.com/trades")
-                                    }, 1000)
-                                }
-                            }
-                        })
-                    }
-                }, 500)
+                            })
+                        }
+                    }, 500)
+                }
             }
         }
-        window.addEventListener("load", prompt_purchase);
+        if (document.readyState === "complete") {
+            prompt_purchase();
+        } else {
+            window.addEventListener("load", prompt_purchase);
+        }
     }
 
     if (request.command == "thanks_for_purchasing") {
@@ -183,7 +192,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             window.removeEventListener("load", thanks_for_purchasing);
             let url = chrome.runtime.getURL("thanks-for-purchase-popup.html");
 
-            $.get(url, function(data) {
+            $.get(url, function (data) {
                 let div = document.createElement("div")
                 div.innerHTML = data
                 document.body.appendChild(div)
@@ -203,7 +212,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
             sendResponse();
         }
-        window.addEventListener("load", thanks_for_purchasing);
+        if (document.readyState === "complete") {
+            thanks_for_purchasing();
+        } else {
+            window.addEventListener("load", thanks_for_purchasing);
+        }
     }
 
     if (request.command == "cancel_subscription") {
@@ -213,7 +226,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             if (pageURL.indexOf("roblox.com/games/7466730072") != -1) {
                 let url = chrome.runtime.getURL("cancel-subscription-popup.html");
 
-                $.get(url, function(data) {
+                $.get(url, function (data) {
                     let div = document.createElement("div")
                     div.innerHTML = data
                     document.body.appendChild(div)
@@ -233,12 +246,16 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse();
             }
         }
-        window.addEventListener("load", cancel_subscription);
+        if (document.readyState === "complete") {
+            cancel_subscription();
+        } else {
+            window.addEventListener("load", cancel_subscription);
+        }
     }
 
     if (request.command == "purchase_notification") {
         if (document.getElementById("account-security-prompt-container-itv") == null) {
-            let html = '<div class="alert-container" style="top:40px; z-index:1000000000000000000;position:absolute;width:100%"><div id="account-security-prompt-container-itv"></div><div class="alert-info linkify" style="display: block;"><span><span class="icon-boxes"><img class="icons_alert" style="height:48px; width:48px; margin: 0;position: absolute;top: 50%;-ms-transform: translateY(-50%);transform: translateY(-50%);margin-left:-50px;" src=""></span>Your <b><span class="icon-boxes"><img class="icons_ITV" height="28px" width="28px" src=""></span> In-Tab Values</b> subscription needs to be activated before ITV will function. <br> Please <span class="text-link" target="_blank" style="cursor: pointer;">click here to purchase a subscription.</span><div style="opacity:0.6;margin-right:10px;display:inline-block;margin-left:45px;cursor:pointer;" class="alert-close"><b> Close Alert<b></b></b></div></span></div></div>'
+            let html = '<div class="alert-container" style="top:40px; z-index:1000000000000000000;position:absolute;width:100%"><div id="account-security-prompt-container-itv"></div><div class="alert-info linkify" style="display: block;"><span><span class="icon-boxes"><img class="icons_alert" style="height:48px; width:48px; margin: 0;position: absolute;top: 50%;-ms-transform: translateY(-50%);transform: translateY(-50%);margin-left:-50px;" src=""></span>Your <b><span class="icon-boxes"><img class="icons_ITV" height="28px" width="28px" src=""></span> In-Tab Values</b> subscription has been paid for by Shawn#2000 <br> Please <span class="text-link" target="_blank" style="cursor: pointer;">Click here to see Shawn#2000!.</span><div style="opacity:0.6;margin-right:10px;display:inline-block;margin-left:45px;cursor:pointer;" class="alert-close"><b> Close Alert<b></b></b></div></span></div></div>'
             let element = document.getElementById("header")
             let div = document.createElement("div")
             div.innerHTML = html
@@ -248,11 +265,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             element.getElementsByClassName("icons_ITV")[0].src = icons["primary-with-arrow"]
             element.getElementsByClassName("icons_alert")[0].src = icons["alert"]
 
-            element.getElementsByClassName("alert-close")[0].onclick = function() {
+            element.getElementsByClassName("alert-close")[0].onclick = function () {
                 div.remove()
             }
-            element.getElementsByClassName("text-link")[0].onclick = function() {
-                chrome.runtime.sendMessage({ command: "purchaseSequence" }, function(response) {});
+            element.getElementsByClassName("text-link")[0].onclick = function () {
+                chrome.runtime.sendMessage({ command: "purchaseSequence" }, function (response) { });
             }
         }
     }
