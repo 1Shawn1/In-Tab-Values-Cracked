@@ -20752,4 +20752,1961 @@ core_controller.helpers.each(
 
 return src;
 
-})));
+})));t = resolve$4([angleLineOpts.borderDashOffset, gridLineOpts.borderDashOffset, 0.0]);
+            }
+
+            for (i = me.chart.data.labels.length - 1; i >= 0; i--) {
+                offset = me.getDistanceFromCenterForValue(opts.ticks.reverse ? me.min : me.max);
+                position = me.getPointPosition(i, offset);
+                ctx.beginPath();
+                ctx.moveTo(me.xCenter, me.yCenter);
+                ctx.lineTo(position.x, position.y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+    },
+
+    /**
+     * @private
+     */
+    _drawLabels: function() {
+        var me = this;
+        var ctx = me.ctx;
+        var opts = me.options;
+        var tickOpts = opts.ticks;
+
+        if (!tickOpts.display) {
+            return;
+        }
+
+        var startAngle = me.getIndexAngle(0);
+        var tickFont = helpers$1.options._parseFont(tickOpts);
+        var tickFontColor = valueOrDefault$c(tickOpts.fontColor, core_defaults.global.defaultFontColor);
+        var offset, width;
+
+        ctx.save();
+        ctx.font = tickFont.string;
+        ctx.translate(me.xCenter, me.yCenter);
+        ctx.rotate(startAngle);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        helpers$1.each(me.ticks, function(label, index) {
+            if (index === 0 && !tickOpts.reverse) {
+                return;
+            }
+
+            offset = me.getDistanceFromCenterForValue(me.ticksAsNumbers[index]);
+
+            if (tickOpts.showLabelBackdrop) {
+                width = ctx.measureText(label).width;
+                ctx.fillStyle = tickOpts.backdropColor;
+
+                ctx.fillRect(
+                    -width / 2 - tickOpts.backdropPaddingX,
+                    -offset - tickFont.size / 2 - tickOpts.backdropPaddingY,
+                    width + tickOpts.backdropPaddingX * 2,
+                    tickFont.size + tickOpts.backdropPaddingY * 2
+                );
+            }
+
+            ctx.fillStyle = tickFontColor;
+            ctx.fillText(label, 0, -offset);
+        });
+
+        ctx.restore();
+    },
+
+    /**
+     * @private
+     */
+    _drawTitle: helpers$1.noop
+});
+
+// INTERNAL: static default options, registered in src/index.js
+var _defaults$3 = defaultConfig$3;
+scale_radialLinear._defaults = _defaults$3;
+
+var deprecated$1 = helpers$1._deprecated;
+var resolve$5 = helpers$1.options.resolve;
+var valueOrDefault$d = helpers$1.valueOrDefault;
+
+// Integer constants are from the ES6 spec.
+var MIN_INTEGER = Number.MIN_SAFE_INTEGER || -9007199254740991;
+var MAX_INTEGER = Number.MAX_SAFE_INTEGER || 9007199254740991;
+
+var INTERVALS = {
+    millisecond: {
+        common: true,
+        size: 1,
+        steps: 1000
+    },
+    second: {
+        common: true,
+        size: 1000,
+        steps: 60
+    },
+    minute: {
+        common: true,
+        size: 60000,
+        steps: 60
+    },
+    hour: {
+        common: true,
+        size: 3600000,
+        steps: 24
+    },
+    day: {
+        common: true,
+        size: 86400000,
+        steps: 30
+    },
+    week: {
+        common: false,
+        size: 604800000,
+        steps: 4
+    },
+    month: {
+        common: true,
+        size: 2.628e9,
+        steps: 12
+    },
+    quarter: {
+        common: false,
+        size: 7.884e9,
+        steps: 4
+    },
+    year: {
+        common: true,
+        size: 3.154e10
+    }
+};
+
+var UNITS = Object.keys(INTERVALS);
+
+function sorter(a, b) {
+    return a - b;
+}
+
+function arrayUnique(items) {
+    var hash = {};
+    var out = [];
+    var i, ilen, item;
+
+    for (i = 0, ilen = items.length; i < ilen; ++i) {
+        item = items[i];
+        if (!hash[item]) {
+            hash[item] = true;
+            out.push(item);
+        }
+    }
+
+    return out;
+}
+
+function getMin(options) {
+    return helpers$1.valueOrDefault(options.time.min, options.ticks.min);
+}
+
+function getMax(options) {
+    return helpers$1.valueOrDefault(options.time.max, options.ticks.max);
+}
+
+/**
+ * Returns an array of {time, pos} objects used to interpolate a specific `time` or position
+ * (`pos`) on the scale, by searching entries before and after the requested value. `pos` is
+ * a decimal between 0 and 1: 0 being the start of the scale (left or top) and 1 the other
+ * extremity (left + width or top + height). Note that it would be more optimized to directly
+ * store pre-computed pixels, but the scale dimensions are not guaranteed at the time we need
+ * to create the lookup table. The table ALWAYS contains at least two items: min and max.
+ *
+ * @param {number[]} timestamps - timestamps sorted from lowest to highest.
+ * @param {string} distribution - If 'linear', timestamps will be spread linearly along the min
+ * and max range, so basically, the table will contains only two items: {min, 0} and {max, 1}.
+ * If 'series', timestamps will be positioned at the same distance from each other. In this
+ * case, only timestamps that break the time linearity are registered, meaning that in the
+ * best case, all timestamps are linear, the table contains only min and max.
+ */
+function buildLookupTable(timestamps, min, max, distribution) {
+    if (distribution === 'linear' || !timestamps.length) {
+        return [
+            {time: min, pos: 0},
+            {time: max, pos: 1}
+        ];
+    }
+
+    var table = [];
+    var items = [min];
+    var i, ilen, prev, curr, next;
+
+    for (i = 0, ilen = timestamps.length; i < ilen; ++i) {
+        curr = timestamps[i];
+        if (curr > min && curr < max) {
+            items.push(curr);
+        }
+    }
+
+    items.push(max);
+
+    for (i = 0, ilen = items.length; i < ilen; ++i) {
+        next = items[i + 1];
+        prev = items[i - 1];
+        curr = items[i];
+
+        // only add points that breaks the scale linearity
+        if (prev === undefined || next === undefined || Math.round((next + prev) / 2) !== curr) {
+            table.push({time: curr, pos: i / (ilen - 1)});
+        }
+    }
+
+    return table;
+}
+
+// @see adapted from https://www.anujgakhar.com/2014/03/01/binary-search-in-javascript/
+function lookup(table, key, value) {
+    var lo = 0;
+    var hi = table.length - 1;
+    var mid, i0, i1;
+
+    while (lo >= 0 && lo <= hi) {
+        mid = (lo + hi) >> 1;
+        i0 = table[mid - 1] || null;
+        i1 = table[mid];
+
+        if (!i0) {
+            // given value is outside table (before first item)
+            return {lo: null, hi: i1};
+        } else if (i1[key] < value) {
+            lo = mid + 1;
+        } else if (i0[key] > value) {
+            hi = mid - 1;
+        } else {
+            return {lo: i0, hi: i1};
+        }
+    }
+
+    // given value is outside table (after last item)
+    return {lo: i1, hi: null};
+}
+
+/**
+ * Linearly interpolates the given source `value` using the table items `skey` values and
+ * returns the associated `tkey` value. For example, interpolate(table, 'time', 42, 'pos')
+ * returns the position for a timestamp equal to 42. If value is out of bounds, values at
+ * index [0, 1] or [n - 1, n] are used for the interpolation.
+ */
+function interpolate$1(table, skey, sval, tkey) {
+    var range = lookup(table, skey, sval);
+
+    // Note: the lookup table ALWAYS contains at least 2 items (min and max)
+    var prev = !range.lo ? table[0] : !range.hi ? table[table.length - 2] : range.lo;
+    var next = !range.lo ? table[1] : !range.hi ? table[table.length - 1] : range.hi;
+
+    var span = next[skey] - prev[skey];
+    var ratio = span ? (sval - prev[skey]) / span : 0;
+    var offset = (next[tkey] - prev[tkey]) * ratio;
+
+    return prev[tkey] + offset;
+}
+
+function toTimestamp(scale, input) {
+    var adapter = scale._adapter;
+    var options = scale.options.time;
+    var parser = options.parser;
+    var format = parser || options.format;
+    var value = input;
+
+    if (typeof parser === 'function') {
+        value = parser(value);
+    }
+
+    // Only parse if its not a timestamp already
+    if (!helpers$1.isFinite(value)) {
+        value = typeof format === 'string'
+            ? adapter.parse(value, format)
+            : adapter.parse(value);
+    }
+
+    if (value !== null) {
+        return +value;
+    }
+
+    // Labels are in an incompatible format and no `parser` has been provided.
+    // The user might still use the deprecated `format` option for parsing.
+    if (!parser && typeof format === 'function') {
+        value = format(input);
+
+        // `format` could return something else than a timestamp, if so, parse it
+        if (!helpers$1.isFinite(value)) {
+            value = adapter.parse(value);
+        }
+    }
+
+    return value;
+}
+
+function parse(scale, input) {
+    if (helpers$1.isNullOrUndef(input)) {
+        return null;
+    }
+
+    var options = scale.options.time;
+    var value = toTimestamp(scale, scale.getRightValue(input));
+    if (value === null) {
+        return value;
+    }
+
+    if (options.round) {
+        value = +scale._adapter.startOf(value, options.round);
+    }
+
+    return value;
+}
+
+/**
+ * Figures out what unit results in an appropriate number of auto-generated ticks
+ */
+function determineUnitForAutoTicks(minUnit, min, max, capacity) {
+    var ilen = UNITS.length;
+    var i, interval, factor;
+
+    for (i = UNITS.indexOf(minUnit); i < ilen - 1; ++i) {
+        interval = INTERVALS[UNITS[i]];
+        factor = interval.steps ? interval.steps : MAX_INTEGER;
+
+        if (interval.common && Math.ceil((max - min) / (factor * interval.size)) <= capacity) {
+            return UNITS[i];
+        }
+    }
+
+    return UNITS[ilen - 1];
+}
+
+/**
+ * Figures out what unit to format a set of ticks with
+ */
+function determineUnitForFormatting(scale, numTicks, minUnit, min, max) {
+    var i, unit;
+
+    for (i = UNITS.length - 1; i >= UNITS.indexOf(minUnit); i--) {
+        unit = UNITS[i];
+        if (INTERVALS[unit].common && scale._adapter.diff(max, min, unit) >= numTicks - 1) {
+            return unit;
+        }
+    }
+
+    return UNITS[minUnit ? UNITS.indexOf(minUnit) : 0];
+}
+
+function determineMajorUnit(unit) {
+    for (var i = UNITS.indexOf(unit) + 1, ilen = UNITS.length; i < ilen; ++i) {
+        if (INTERVALS[UNITS[i]].common) {
+            return UNITS[i];
+        }
+    }
+}
+
+/**
+ * Generates a maximum of `capacity` timestamps between min and max, rounded to the
+ * `minor` unit using the given scale time `options`.
+ * Important: this method can return ticks outside the min and max range, it's the
+ * responsibility of the calling code to clamp values if needed.
+ */
+function generate(scale, min, max, capacity) {
+    var adapter = scale._adapter;
+    var options = scale.options;
+    var timeOpts = options.time;
+    var minor = timeOpts.unit || determineUnitForAutoTicks(timeOpts.minUnit, min, max, capacity);
+    var stepSize = resolve$5([timeOpts.stepSize, timeOpts.unitStepSize, 1]);
+    var weekday = minor === 'week' ? timeOpts.isoWeekday : false;
+    var first = min;
+    var ticks = [];
+    var time;
+
+    // For 'week' unit, handle the first day of week option
+    if (weekday) {
+        first = +adapter.startOf(first, 'isoWeek', weekday);
+    }
+
+    // Align first ticks on unit
+    first = +adapter.startOf(first, weekday ? 'day' : minor);
+
+    // Prevent browser from freezing in case user options request millions of milliseconds
+    if (adapter.diff(max, min, minor) > 100000 * stepSize) {
+        throw min + ' and ' + max + ' are too far apart with stepSize of ' + stepSize + ' ' + minor;
+    }
+
+    for (time = first; time < max; time = +adapter.add(time, stepSize, minor)) {
+        ticks.push(time);
+    }
+
+    if (time === max || options.bounds === 'ticks') {
+        ticks.push(time);
+    }
+
+    return ticks;
+}
+
+/**
+ * Returns the start and end offsets from edges in the form of {start, end}
+ * where each value is a relative width to the scale and ranges between 0 and 1.
+ * They add extra margins on the both sides by scaling down the original scale.
+ * Offsets are added when the `offset` option is true.
+ */
+function computeOffsets(table, ticks, min, max, options) {
+    var start = 0;
+    var end = 0;
+    var first, last;
+
+    if (options.offset && ticks.length) {
+        first = interpolate$1(table, 'time', ticks[0], 'pos');
+        if (ticks.length === 1) {
+            start = 1 - first;
+        } else {
+            start = (interpolate$1(table, 'time', ticks[1], 'pos') - first) / 2;
+        }
+        last = interpolate$1(table, 'time', ticks[ticks.length - 1], 'pos');
+        if (ticks.length === 1) {
+            end = last;
+        } else {
+            end = (last - interpolate$1(table, 'time', ticks[ticks.length - 2], 'pos')) / 2;
+        }
+    }
+
+    return {start: start, end: end, factor: 1 / (start + 1 + end)};
+}
+
+function setMajorTicks(scale, ticks, map, majorUnit) {
+    var adapter = scale._adapter;
+    var first = +adapter.startOf(ticks[0].value, majorUnit);
+    var last = ticks[ticks.length - 1].value;
+    var major, index;
+
+    for (major = first; major <= last; major = +adapter.add(major, 1, majorUnit)) {
+        index = map[major];
+        if (index >= 0) {
+            ticks[index].major = true;
+        }
+    }
+    return ticks;
+}
+
+function ticksFromTimestamps(scale, values, majorUnit) {
+    var ticks = [];
+    var map = {};
+    var ilen = values.length;
+    var i, value;
+
+    for (i = 0; i < ilen; ++i) {
+        value = values[i];
+        map[value] = i;
+
+        ticks.push({
+            value: value,
+            major: false
+        });
+    }
+
+    // We set the major ticks separately from the above loop because calling startOf for every tick
+    // is expensive when there is a large number of ticks
+    return (ilen === 0 || !majorUnit) ? ticks : setMajorTicks(scale, ticks, map, majorUnit);
+}
+
+var defaultConfig$4 = {
+    position: 'bottom',
+
+    /**
+     * Data distribution along the scale:
+     * - 'linear': data are spread according to their time (distances can vary),
+     * - 'series': data are spread at the same distance from each other.
+     * @see https://github.com/chartjs/Chart.js/pull/4507
+     * @since 2.7.0
+     */
+    distribution: 'linear',
+
+    /**
+     * Scale boundary strategy (bypassed by min/max time options)
+     * - `data`: make sure data are fully visible, ticks outside are removed
+     * - `ticks`: make sure ticks are fully visible, data outside are truncated
+     * @see https://github.com/chartjs/Chart.js/pull/4556
+     * @since 2.7.0
+     */
+    bounds: 'data',
+
+    adapters: {},
+    time: {
+        parser: false, // false == a pattern string from https://momentjs.com/docs/#/parsing/string-format/ or a custom callback that converts its argument to a moment
+        unit: false, // false == automatic or override with week, month, year, etc.
+        round: false, // none, or override with week, month, year, etc.
+        displayFormat: false, // DEPRECATED
+        isoWeekday: false, // override week start day - see https://momentjs.com/docs/#/get-set/iso-weekday/
+        minUnit: 'millisecond',
+        displayFormats: {}
+    },
+    ticks: {
+        autoSkip: false,
+
+        /**
+         * Ticks generation input values:
+         * - 'auto': generates "optimal" ticks based on scale size and time options.
+         * - 'data': generates ticks from data (including labels from data {t|x|y} objects).
+         * - 'labels': generates ticks from user given `data.labels` values ONLY.
+         * @see https://github.com/chartjs/Chart.js/pull/4507
+         * @since 2.7.0
+         */
+        source: 'auto',
+
+        major: {
+            enabled: false
+        }
+    }
+};
+
+var scale_time = core_scale.extend({
+    initialize: function() {
+        this.mergeTicksOptions();
+        core_scale.prototype.initialize.call(this);
+    },
+
+    update: function() {
+        var me = this;
+        var options = me.options;
+        var time = options.time || (options.time = {});
+        var adapter = me._adapter = new core_adapters._date(options.adapters.date);
+
+        // DEPRECATIONS: output a message only one time per update
+        deprecated$1('time scale', time.format, 'time.format', 'time.parser');
+        deprecated$1('time scale', time.min, 'time.min', 'ticks.min');
+        deprecated$1('time scale', time.max, 'time.max', 'ticks.max');
+
+        // Backward compatibility: before introducing adapter, `displayFormats` was
+        // supposed to contain *all* unit/string pairs but this can't be resolved
+        // when loading the scale (adapters are loaded afterward), so let's populate
+        // missing formats on update
+        helpers$1.mergeIf(time.displayFormats, adapter.formats());
+
+        return core_scale.prototype.update.apply(me, arguments);
+    },
+
+    /**
+     * Allows data to be referenced via 't' attribute
+     */
+    getRightValue: function(rawValue) {
+        if (rawValue && rawValue.t !== undefined) {
+            rawValue = rawValue.t;
+        }
+        return core_scale.prototype.getRightValue.call(this, rawValue);
+    },
+
+    determineDataLimits: function() {
+        var me = this;
+        var chart = me.chart;
+        var adapter = me._adapter;
+        var options = me.options;
+        var unit = options.time.unit || 'day';
+        var min = MAX_INTEGER;
+        var max = MIN_INTEGER;
+        var timestamps = [];
+        var datasets = [];
+        var labels = [];
+        var i, j, ilen, jlen, data, timestamp, labelsAdded;
+        var dataLabels = me._getLabels();
+
+        for (i = 0, ilen = dataLabels.length; i < ilen; ++i) {
+            labels.push(parse(me, dataLabels[i]));
+        }
+
+        for (i = 0, ilen = (chart.data.datasets || []).length; i < ilen; ++i) {
+            if (chart.isDatasetVisible(i)) {
+                data = chart.data.datasets[i].data;
+
+                // Let's consider that all data have the same format.
+                if (helpers$1.isObject(data[0])) {
+                    datasets[i] = [];
+
+                    for (j = 0, jlen = data.length; j < jlen; ++j) {
+                        timestamp = parse(me, data[j]);
+                        timestamps.push(timestamp);
+                        datasets[i][j] = timestamp;
+                    }
+                } else {
+                    datasets[i] = labels.slice(0);
+                    if (!labelsAdded) {
+                        timestamps = timestamps.concat(labels);
+                        labelsAdded = true;
+                    }
+                }
+            } else {
+                datasets[i] = [];
+            }
+        }
+
+        if (labels.length) {
+            min = Math.min(min, labels[0]);
+            max = Math.max(max, labels[labels.length - 1]);
+        }
+
+        if (timestamps.length) {
+            timestamps = ilen > 1 ? arrayUnique(timestamps).sort(sorter) : timestamps.sort(sorter);
+            min = Math.min(min, timestamps[0]);
+            max = Math.max(max, timestamps[timestamps.length - 1]);
+        }
+
+        min = parse(me, getMin(options)) || min;
+        max = parse(me, getMax(options)) || max;
+
+        // In case there is no valid min/max, set limits based on unit time option
+        min = min === MAX_INTEGER ? +adapter.startOf(Date.now(), unit) : min;
+        max = max === MIN_INTEGER ? +adapter.endOf(Date.now(), unit) + 1 : max;
+
+        // Make sure that max is strictly higher than min (required by the lookup table)
+        me.min = Math.min(min, max);
+        me.max = Math.max(min + 1, max);
+
+        // PRIVATE
+        me._table = [];
+        me._timestamps = {
+            data: timestamps,
+            datasets: datasets,
+            labels: labels
+        };
+    },
+
+    buildTicks: function() {
+        var me = this;
+        var min = me.min;
+        var max = me.max;
+        var options = me.options;
+        var tickOpts = options.ticks;
+        var timeOpts = options.time;
+        var timestamps = me._timestamps;
+        var ticks = [];
+        var capacity = me.getLabelCapacity(min);
+        var source = tickOpts.source;
+        var distribution = options.distribution;
+        var i, ilen, timestamp;
+
+        if (source === 'data' || (source === 'auto' && distribution === 'series')) {
+            timestamps = timestamps.data;
+        } else if (source === 'labels') {
+            timestamps = timestamps.labels;
+        } else {
+            timestamps = generate(me, min, max, capacity);
+        }
+
+        if (options.bounds === 'ticks' && timestamps.length) {
+            min = timestamps[0];
+            max = timestamps[timestamps.length - 1];
+        }
+
+        // Enforce limits with user min/max options
+        min = parse(me, getMin(options)) || min;
+        max = parse(me, getMax(options)) || max;
+
+        // Remove ticks outside the min/max range
+        for (i = 0, ilen = timestamps.length; i < ilen; ++i) {
+            timestamp = timestamps[i];
+            if (timestamp >= min && timestamp <= max) {
+                ticks.push(timestamp);
+            }
+        }
+
+        me.min = min;
+        me.max = max;
+
+        // PRIVATE
+        // determineUnitForFormatting relies on the number of ticks so we don't use it when
+        // autoSkip is enabled because we don't yet know what the final number of ticks will be
+        me._unit = timeOpts.unit || (tickOpts.autoSkip
+            ? determineUnitForAutoTicks(timeOpts.minUnit, me.min, me.max, capacity)
+            : determineUnitForFormatting(me, ticks.length, timeOpts.minUnit, me.min, me.max));
+        me._majorUnit = !tickOpts.major.enabled || me._unit === 'year' ? undefined
+            : determineMajorUnit(me._unit);
+        me._table = buildLookupTable(me._timestamps.data, min, max, distribution);
+        me._offsets = computeOffsets(me._table, ticks, min, max, options);
+
+        if (tickOpts.reverse) {
+            ticks.reverse();
+        }
+
+        return ticksFromTimestamps(me, ticks, me._majorUnit);
+    },
+
+    getLabelForIndex: function(index, datasetIndex) {
+        var me = this;
+        var adapter = me._adapter;
+        var data = me.chart.data;
+        var timeOpts = me.options.time;
+        var label = data.labels && index < data.labels.length ? data.labels[index] : '';
+        var value = data.datasets[datasetIndex].data[index];
+
+        if (helpers$1.isObject(value)) {
+            label = me.getRightValue(value);
+        }
+        if (timeOpts.tooltipFormat) {
+            return adapter.format(toTimestamp(me, label), timeOpts.tooltipFormat);
+        }
+        if (typeof label === 'string') {
+            return label;
+        }
+        return adapter.format(toTimestamp(me, label), timeOpts.displayFormats.datetime);
+    },
+
+    /**
+     * Function to format an individual tick mark
+     * @private
+     */
+    tickFormatFunction: function(time, index, ticks, format) {
+        var me = this;
+        var adapter = me._adapter;
+        var options = me.options;
+        var formats = options.time.displayFormats;
+        var minorFormat = formats[me._unit];
+        var majorUnit = me._majorUnit;
+        var majorFormat = formats[majorUnit];
+        var tick = ticks[index];
+        var tickOpts = options.ticks;
+        var major = majorUnit && majorFormat && tick && tick.major;
+        var label = adapter.format(time, format ? format : major ? majorFormat : minorFormat);
+        var nestedTickOpts = major ? tickOpts.major : tickOpts.minor;
+        var formatter = resolve$5([
+            nestedTickOpts.callback,
+            nestedTickOpts.userCallback,
+            tickOpts.callback,
+            tickOpts.userCallback
+        ]);
+
+        return formatter ? formatter(label, index, ticks) : label;
+    },
+
+    convertTicksToLabels: function(ticks) {
+        var labels = [];
+        var i, ilen;
+
+        for (i = 0, ilen = ticks.length; i < ilen; ++i) {
+            labels.push(this.tickFormatFunction(ticks[i].value, i, ticks));
+        }
+
+        return labels;
+    },
+
+    /**
+     * @private
+     */
+    getPixelForOffset: function(time) {
+        var me = this;
+        var offsets = me._offsets;
+        var pos = interpolate$1(me._table, 'time', time, 'pos');
+        return me.getPixelForDecimal((offsets.start + pos) * offsets.factor);
+    },
+
+    getPixelForValue: function(value, index, datasetIndex) {
+        var me = this;
+        var time = null;
+
+        if (index !== undefined && datasetIndex !== undefined) {
+            time = me._timestamps.datasets[datasetIndex][index];
+        }
+
+        if (time === null) {
+            time = parse(me, value);
+        }
+
+        if (time !== null) {
+            return me.getPixelForOffset(time);
+        }
+    },
+
+    getPixelForTick: function(index) {
+        var ticks = this.getTicks();
+        return index >= 0 && index < ticks.length ?
+            this.getPixelForOffset(ticks[index].value) :
+            null;
+    },
+
+    getValueForPixel: function(pixel) {
+        var me = this;
+        var offsets = me._offsets;
+        var pos = me.getDecimalForPixel(pixel) / offsets.factor - offsets.end;
+        var time = interpolate$1(me._table, 'pos', pos, 'time');
+
+        // DEPRECATION, we should return time directly
+        return me._adapter._create(time);
+    },
+
+    /**
+     * @private
+     */
+    _getLabelSize: function(label) {
+        var me = this;
+        var ticksOpts = me.options.ticks;
+        var tickLabelWidth = me.ctx.measureText(label).width;
+        var angle = helpers$1.toRadians(me.isHorizontal() ? ticksOpts.maxRotation : ticksOpts.minRotation);
+        var cosRotation = Math.cos(angle);
+        var sinRotation = Math.sin(angle);
+        var tickFontSize = valueOrDefault$d(ticksOpts.fontSize, core_defaults.global.defaultFontSize);
+
+        return {
+            w: (tickLabelWidth * cosRotation) + (tickFontSize * sinRotation),
+            h: (tickLabelWidth * sinRotation) + (tickFontSize * cosRotation)
+        };
+    },
+
+    /**
+     * Crude approximation of what the label width might be
+     * @private
+     */
+    getLabelWidth: function(label) {
+        return this._getLabelSize(label).w;
+    },
+
+    /**
+     * @private
+     */
+    getLabelCapacity: function(exampleTime) {
+        var me = this;
+        var timeOpts = me.options.time;
+        var displayFormats = timeOpts.displayFormats;
+
+        // pick the longest format (milliseconds) for guestimation
+        var format = displayFormats[timeOpts.unit] || displayFormats.millisecond;
+        var exampleLabel = me.tickFormatFunction(exampleTime, 0, ticksFromTimestamps(me, [exampleTime], me._majorUnit), format);
+        var size = me._getLabelSize(exampleLabel);
+        var capacity = Math.floor(me.isHorizontal() ? me.width / size.w : me.height / size.h);
+
+        if (me.options.offset) {
+            capacity--;
+        }
+
+        return capacity > 0 ? capacity : 1;
+    }
+});
+
+// INTERNAL: static default options, registered in src/index.js
+var _defaults$4 = defaultConfig$4;
+scale_time._defaults = _defaults$4;
+
+var scales = {
+    category: scale_category,
+    linear: scale_linear,
+    logarithmic: scale_logarithmic,
+    radialLinear: scale_radialLinear,
+    time: scale_time
+};
+
+var moment = createCommonjsModule(function (module, exports) {
+(function (global, factory) {
+     module.exports = factory() ;
+}(commonjsGlobal, (function () {
+    var hookCallback;
+
+    function hooks () {
+        return hookCallback.apply(null, arguments);
+    }
+
+    // This is done to register the method called with moment()
+    // without creating circular dependencies.
+    function setHookCallback (callback) {
+        hookCallback = callback;
+    }
+
+    function isArray(input) {
+        return input instanceof Array || Object.prototype.toString.call(input) === '[object Array]';
+    }
+
+    function isObject(input) {
+        // IE8 will treat undefined and null as object if it wasn't for
+        // input != null
+        return input != null && Object.prototype.toString.call(input) === '[object Object]';
+    }
+
+    function isObjectEmpty(obj) {
+        if (Object.getOwnPropertyNames) {
+            return (Object.getOwnPropertyNames(obj).length === 0);
+        } else {
+            var k;
+            for (k in obj) {
+                if (obj.hasOwnProperty(k)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    function isUndefined(input) {
+        return input === void 0;
+    }
+
+    function isNumber(input) {
+        return typeof input === 'number' || Object.prototype.toString.call(input) === '[object Number]';
+    }
+
+    function isDate(input) {
+        return input instanceof Date || Object.prototype.toString.call(input) === '[object Date]';
+    }
+
+    function map(arr, fn) {
+        var res = [], i;
+        for (i = 0; i < arr.length; ++i) {
+            res.push(fn(arr[i], i));
+        }
+        return res;
+    }
+
+    function hasOwnProp(a, b) {
+        return Object.prototype.hasOwnProperty.call(a, b);
+    }
+
+    function extend(a, b) {
+        for (var i in b) {
+            if (hasOwnProp(b, i)) {
+                a[i] = b[i];
+            }
+        }
+
+        if (hasOwnProp(b, 'toString')) {
+            a.toString = b.toString;
+        }
+
+        if (hasOwnProp(b, 'valueOf')) {
+            a.valueOf = b.valueOf;
+        }
+
+        return a;
+    }
+
+    function createUTC (input, format, locale, strict) {
+        return createLocalOrUTC(input, format, locale, strict, true).utc();
+    }
+
+    function defaultParsingFlags() {
+        // We need to deep clone this object.
+        return {
+            empty           : false,
+            unusedTokens    : [],
+            unusedInput     : [],
+            overflow        : -2,
+            charsLeftOver   : 0,
+            nullInput       : false,
+            invalidMonth    : null,
+            invalidFormat   : false,
+            userInvalidated : false,
+            iso             : false,
+            parsedDateParts : [],
+            meridiem        : null,
+            rfc2822         : false,
+            weekdayMismatch : false
+        };
+    }
+
+    function getParsingFlags(m) {
+        if (m._pf == null) {
+            m._pf = defaultParsingFlags();
+        }
+        return m._pf;
+    }
+
+    var some;
+    if (Array.prototype.some) {
+        some = Array.prototype.some;
+    } else {
+        some = function (fun) {
+            var t = Object(this);
+            var len = t.length >>> 0;
+
+            for (var i = 0; i < len; i++) {
+                if (i in t && fun.call(this, t[i], i, t)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+    }
+
+    function isValid(m) {
+        if (m._isValid == null) {
+            var flags = getParsingFlags(m);
+            var parsedParts = some.call(flags.parsedDateParts, function (i) {
+                return i != null;
+            });
+            var isNowValid = !isNaN(m._d.getTime()) &&
+                flags.overflow < 0 &&
+                !flags.empty &&
+                !flags.invalidMonth &&
+                !flags.invalidWeekday &&
+                !flags.weekdayMismatch &&
+                !flags.nullInput &&
+                !flags.invalidFormat &&
+                !flags.userInvalidated &&
+                (!flags.meridiem || (flags.meridiem && parsedParts));
+
+            if (m._strict) {
+                isNowValid = isNowValid &&
+                    flags.charsLeftOver === 0 &&
+                    flags.unusedTokens.length === 0 &&
+                    flags.bigHour === undefined;
+            }
+
+            if (Object.isFrozen == null || !Object.isFrozen(m)) {
+                m._isValid = isNowValid;
+            }
+            else {
+                return isNowValid;
+            }
+        }
+        return m._isValid;
+    }
+
+    function createInvalid (flags) {
+        var m = createUTC(NaN);
+        if (flags != null) {
+            extend(getParsingFlags(m), flags);
+        }
+        else {
+            getParsingFlags(m).userInvalidated = true;
+        }
+
+        return m;
+    }
+
+    // Plugins that add properties should also add the key here (null value),
+    // so we can properly clone ourselves.
+    var momentProperties = hooks.momentProperties = [];
+
+    function copyConfig(to, from) {
+        var i, prop, val;
+
+        if (!isUndefined(from._isAMomentObject)) {
+            to._isAMomentObject = from._isAMomentObject;
+        }
+        if (!isUndefined(from._i)) {
+            to._i = from._i;
+        }
+        if (!isUndefined(from._f)) {
+            to._f = from._f;
+        }
+        if (!isUndefined(from._l)) {
+            to._l = from._l;
+        }
+        if (!isUndefined(from._strict)) {
+            to._strict = from._strict;
+        }
+        if (!isUndefined(from._tzm)) {
+            to._tzm = from._tzm;
+        }
+        if (!isUndefined(from._isUTC)) {
+            to._isUTC = from._isUTC;
+        }
+        if (!isUndefined(from._offset)) {
+            to._offset = from._offset;
+        }
+        if (!isUndefined(from._pf)) {
+            to._pf = getParsingFlags(from);
+        }
+        if (!isUndefined(from._locale)) {
+            to._locale = from._locale;
+        }
+
+        if (momentProperties.length > 0) {
+            for (i = 0; i < momentProperties.length; i++) {
+                prop = momentProperties[i];
+                val = from[prop];
+                if (!isUndefined(val)) {
+                    to[prop] = val;
+                }
+            }
+        }
+
+        return to;
+    }
+
+    var updateInProgress = false;
+
+    // Moment prototype object
+    function Moment(config) {
+        copyConfig(this, config);
+        this._d = new Date(config._d != null ? config._d.getTime() : NaN);
+        if (!this.isValid()) {
+            this._d = new Date(NaN);
+        }
+        // Prevent infinite loop in case updateOffset creates new moment
+        // objects.
+        if (updateInProgress === false) {
+            updateInProgress = true;
+            hooks.updateOffset(this);
+            updateInProgress = false;
+        }
+    }
+
+    function isMoment (obj) {
+        return obj instanceof Moment || (obj != null && obj._isAMomentObject != null);
+    }
+
+    function absFloor (number) {
+        if (number < 0) {
+            // -0 -> 0
+            return Math.ceil(number) || 0;
+        } else {
+            return Math.floor(number);
+        }
+    }
+
+    function toInt(argumentForCoercion) {
+        var coercedNumber = +argumentForCoercion,
+            value = 0;
+
+        if (coercedNumber !== 0 && isFinite(coercedNumber)) {
+            value = absFloor(coercedNumber);
+        }
+
+        return value;
+    }
+
+    // compare two arrays, return the number of differences
+    function compareArrays(array1, array2, dontConvert) {
+        var len = Math.min(array1.length, array2.length),
+            lengthDiff = Math.abs(array1.length - array2.length),
+            diffs = 0,
+            i;
+        for (i = 0; i < len; i++) {
+            if ((dontConvert && array1[i] !== array2[i]) ||
+                (!dontConvert && toInt(array1[i]) !== toInt(array2[i]))) {
+                diffs++;
+            }
+        }
+        return diffs + lengthDiff;
+    }
+
+    function warn(msg) {
+        if (hooks.suppressDeprecationWarnings === false &&
+                (typeof console !==  'undefined') && console.warn) {
+            console.warn('Deprecation warning: ' + msg);
+        }
+    }
+
+    function deprecate(msg, fn) {
+        var firstTime = true;
+
+        return extend(function () {
+            if (hooks.deprecationHandler != null) {
+                hooks.deprecationHandler(null, msg);
+            }
+            if (firstTime) {
+                var args = [];
+                var arg;
+                for (var i = 0; i < arguments.length; i++) {
+                    arg = '';
+                    if (typeof arguments[i] === 'object') {
+                        arg += '\n[' + i + '] ';
+                        for (var key in arguments[0]) {
+                            arg += key + ': ' + arguments[0][key] + ', ';
+                        }
+                        arg = arg.slice(0, -2); // Remove trailing comma and space
+                    } else {
+                        arg = arguments[i];
+                    }
+                    args.push(arg);
+                }
+                warn(msg + '\nArguments: ' + Array.prototype.slice.call(args).join('') + '\n' + (new Error()).stack);
+                firstTime = false;
+            }
+            return fn.apply(this, arguments);
+        }, fn);
+    }
+
+    var deprecations = {};
+
+    function deprecateSimple(name, msg) {
+        if (hooks.deprecationHandler != null) {
+            hooks.deprecationHandler(name, msg);
+        }
+        if (!deprecations[name]) {
+            warn(msg);
+            deprecations[name] = true;
+        }
+    }
+
+    hooks.suppressDeprecationWarnings = false;
+    hooks.deprecationHandler = null;
+
+    function isFunction(input) {
+        return input instanceof Function || Object.prototype.toString.call(input) === '[object Function]';
+    }
+
+    function set (config) {
+        var prop, i;
+        for (i in config) {
+            prop = config[i];
+            if (isFunction(prop)) {
+                this[i] = prop;
+            } else {
+                this['_' + i] = prop;
+            }
+        }
+        this._config = config;
+        // Lenient ordinal parsing accepts just a number in addition to
+        // number + (possibly) stuff coming from _dayOfMonthOrdinalParse.
+        // TODO: Remove "ordinalParse" fallback in next major release.
+        this._dayOfMonthOrdinalParseLenient = new RegExp(
+            (this._dayOfMonthOrdinalParse.source || this._ordinalParse.source) +
+                '|' + (/\d{1,2}/).source);
+    }
+
+    function mergeConfigs(parentConfig, childConfig) {
+        var res = extend({}, parentConfig), prop;
+        for (prop in childConfig) {
+            if (hasOwnProp(childConfig, prop)) {
+                if (isObject(parentConfig[prop]) && isObject(childConfig[prop])) {
+                    res[prop] = {};
+                    extend(res[prop], parentConfig[prop]);
+                    extend(res[prop], childConfig[prop]);
+                } else if (childConfig[prop] != null) {
+                    res[prop] = childConfig[prop];
+                } else {
+                    delete res[prop];
+                }
+            }
+        }
+        for (prop in parentConfig) {
+            if (hasOwnProp(parentConfig, prop) &&
+                    !hasOwnProp(childConfig, prop) &&
+                    isObject(parentConfig[prop])) {
+                // make sure changes to properties don't modify parent config
+                res[prop] = extend({}, res[prop]);
+            }
+        }
+        return res;
+    }
+
+    function Locale(config) {
+        if (config != null) {
+            this.set(config);
+        }
+    }
+
+    var keys;
+
+    if (Object.keys) {
+        keys = Object.keys;
+    } else {
+        keys = function (obj) {
+            var i, res = [];
+            for (i in obj) {
+                if (hasOwnProp(obj, i)) {
+                    res.push(i);
+                }
+            }
+            return res;
+        };
+    }
+
+    var defaultCalendar = {
+        sameDay : '[Today at] LT',
+        nextDay : '[Tomorrow at] LT',
+        nextWeek : 'dddd [at] LT',
+        lastDay : '[Yesterday at] LT',
+        lastWeek : '[Last] dddd [at] LT',
+        sameElse : 'L'
+    };
+
+    function calendar (key, mom, now) {
+        var output = this._calendar[key] || this._calendar['sameElse'];
+        return isFunction(output) ? output.call(mom, now) : output;
+    }
+
+    var defaultLongDateFormat = {
+        LTS  : 'h:mm:ss A',
+        LT   : 'h:mm A',
+        L    : 'MM/DD/YYYY',
+        LL   : 'MMMM D, YYYY',
+        LLL  : 'MMMM D, YYYY h:mm A',
+        LLLL : 'dddd, MMMM D, YYYY h:mm A'
+    };
+
+    function longDateFormat (key) {
+        var format = this._longDateFormat[key],
+            formatUpper = this._longDateFormat[key.toUpperCase()];
+
+        if (format || !formatUpper) {
+            return format;
+        }
+
+        this._longDateFormat[key] = formatUpper.replace(/MMMM|MM|DD|dddd/g, function (val) {
+            return val.slice(1);
+        });
+
+        return this._longDateFormat[key];
+    }
+
+    var defaultInvalidDate = 'Invalid date';
+
+    function invalidDate () {
+        return this._invalidDate;
+    }
+
+    var defaultOrdinal = '%d';
+    var defaultDayOfMonthOrdinalParse = /\d{1,2}/;
+
+    function ordinal (number) {
+        return this._ordinal.replace('%d', number);
+    }
+
+    var defaultRelativeTime = {
+        future : 'in %s',
+        past   : '%s ago',
+        s  : 'a few seconds',
+        ss : '%d seconds',
+        m  : 'a minute',
+        mm : '%d minutes',
+        h  : 'an hour',
+        hh : '%d hours',
+        d  : 'a day',
+        dd : '%d days',
+        M  : 'a month',
+        MM : '%d months',
+        y  : 'a year',
+        yy : '%d years'
+    };
+
+    function relativeTime (number, withoutSuffix, string, isFuture) {
+        var output = this._relativeTime[string];
+        return (isFunction(output)) ?
+            output(number, withoutSuffix, string, isFuture) :
+            output.replace(/%d/i, number);
+    }
+
+    function pastFuture (diff, output) {
+        var format = this._relativeTime[diff > 0 ? 'future' : 'past'];
+        return isFunction(format) ? format(output) : format.replace(/%s/i, output);
+    }
+
+    var aliases = {};
+
+    function addUnitAlias (unit, shorthand) {
+        var lowerCase = unit.toLowerCase();
+        aliases[lowerCase] = aliases[lowerCase + 's'] = aliases[shorthand] = unit;
+    }
+
+    function normalizeUnits(units) {
+        return typeof units === 'string' ? aliases[units] || aliases[units.toLowerCase()] : undefined;
+    }
+
+    function normalizeObjectUnits(inputObject) {
+        var normalizedInput = {},
+            normalizedProp,
+            prop;
+
+        for (prop in inputObject) {
+            if (hasOwnProp(inputObject, prop)) {
+                normalizedProp = normalizeUnits(prop);
+                if (normalizedProp) {
+                    normalizedInput[normalizedProp] = inputObject[prop];
+                }
+            }
+        }
+
+        return normalizedInput;
+    }
+
+    var priorities = {};
+
+    function addUnitPriority(unit, priority) {
+        priorities[unit] = priority;
+    }
+
+    function getPrioritizedUnits(unitsObj) {
+        var units = [];
+        for (var u in unitsObj) {
+            units.push({unit: u, priority: priorities[u]});
+        }
+        units.sort(function (a, b) {
+            return a.priority - b.priority;
+        });
+        return units;
+    }
+
+    function zeroFill(number, targetLength, forceSign) {
+        var absNumber = '' + Math.abs(number),
+            zerosToFill = targetLength - absNumber.length,
+            sign = number >= 0;
+        return (sign ? (forceSign ? '+' : '') : '-') +
+            Math.pow(10, Math.max(0, zerosToFill)).toString().substr(1) + absNumber;
+    }
+
+    var formattingTokens = /(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|YYYYYY|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g;
+
+    var localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g;
+
+    var formatFunctions = {};
+
+    var formatTokenFunctions = {};
+
+    // token:    'M'
+    // padded:   ['MM', 2]
+    // ordinal:  'Mo'
+    // callback: function () { this.month() + 1 }
+    function addFormatToken (token, padded, ordinal, callback) {
+        var func = callback;
+        if (typeof callback === 'string') {
+            func = function () {
+                return this[callback]();
+            };
+        }
+        if (token) {
+            formatTokenFunctions[token] = func;
+        }
+        if (padded) {
+            formatTokenFunctions[padded[0]] = function () {
+                return zeroFill(func.apply(this, arguments), padded[1], padded[2]);
+            };
+        }
+        if (ordinal) {
+            formatTokenFunctions[ordinal] = function () {
+                return this.localeData().ordinal(func.apply(this, arguments), token);
+            };
+        }
+    }
+
+    function removeFormattingTokens(input) {
+        if (input.match(/\[[\s\S]/)) {
+            return input.replace(/^\[|\]$/g, '');
+        }
+        return input.replace(/\\/g, '');
+    }
+
+    function makeFormatFunction(format) {
+        var array = format.match(formattingTokens), i, length;
+
+        for (i = 0, length = array.length; i < length; i++) {
+            if (formatTokenFunctions[array[i]]) {
+                array[i] = formatTokenFunctions[array[i]];
+            } else {
+                array[i] = removeFormattingTokens(array[i]);
+            }
+        }
+
+        return function (mom) {
+            var output = '', i;
+            for (i = 0; i < length; i++) {
+                output += isFunction(array[i]) ? array[i].call(mom, format) : array[i];
+            }
+            return output;
+        };
+    }
+
+    // format date using native date object
+    function formatMoment(m, format) {
+        if (!m.isValid()) {
+            return m.localeData().invalidDate();
+        }
+
+        format = expandFormat(format, m.localeData());
+        formatFunctions[format] = formatFunctions[format] || makeFormatFunction(format);
+
+        return formatFunctions[format](m);
+    }
+
+    function expandFormat(format, locale) {
+        var i = 5;
+
+        function replaceLongDateFormatTokens(input) {
+            return locale.longDateFormat(input) || input;
+        }
+
+        localFormattingTokens.lastIndex = 0;
+        while (i >= 0 && localFormattingTokens.test(format)) {
+            format = format.replace(localFormattingTokens, replaceLongDateFormatTokens);
+            localFormattingTokens.lastIndex = 0;
+            i -= 1;
+        }
+
+        return format;
+    }
+
+    var match1         = /\d/;            //       0 - 9
+    var match2         = /\d\d/;          //      00 - 99
+    var match3         = /\d{3}/;         //     000 - 999
+    var match4         = /\d{4}/;         //    0000 - 9999
+    var match6         = /[+-]?\d{6}/;    // -999999 - 999999
+    var match1to2      = /\d\d?/;         //       0 - 99
+    var match3to4      = /\d\d\d\d?/;     //     999 - 9999
+    var match5to6      = /\d\d\d\d\d\d?/; //   99999 - 999999
+    var match1to3      = /\d{1,3}/;       //       0 - 999
+    var match1to4      = /\d{1,4}/;       //       0 - 9999
+    var match1to6      = /[+-]?\d{1,6}/;  // -999999 - 999999
+
+    var matchUnsigned  = /\d+/;           //       0 - inf
+    var matchSigned    = /[+-]?\d+/;      //    -inf - inf
+
+    var matchOffset    = /Z|[+-]\d\d:?\d\d/gi; // +00:00 -00:00 +0000 -0000 or Z
+    var matchShortOffset = /Z|[+-]\d\d(?::?\d\d)?/gi; // +00 -00 +00:00 -00:00 +0000 -0000 or Z
+
+    var matchTimestamp = /[+-]?\d+(\.\d{1,3})?/; // 123456789 123456789.123
+
+    // any word (or two) characters or numbers including two/three word month in arabic.
+    // includes scottish gaelic two word and hyphenated months
+    var matchWord = /[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i;
+
+    var regexes = {};
+
+    function addRegexToken (token, regex, strictRegex) {
+        regexes[token] = isFunction(regex) ? regex : function (isStrict, localeData) {
+            return (isStrict && strictRegex) ? strictRegex : regex;
+        };
+    }
+
+    function getParseRegexForToken (token, config) {
+        if (!hasOwnProp(regexes, token)) {
+            return new RegExp(unescapeFormat(token));
+        }
+
+        return regexes[token](config._strict, config._locale);
+    }
+
+    // Code from http://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript
+    function unescapeFormat(s) {
+        return regexEscape(s.replace('\\', '').replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g, function (matched, p1, p2, p3, p4) {
+            return p1 || p2 || p3 || p4;
+        }));
+    }
+
+    function regexEscape(s) {
+        return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    }
+
+    var tokens = {};
+
+    function addParseToken (token, callback) {
+        var i, func = callback;
+        if (typeof token === 'string') {
+            token = [token];
+        }
+        if (isNumber(callback)) {
+            func = function (input, array) {
+                array[callback] = toInt(input);
+            };
+        }
+        for (i = 0; i < token.length; i++) {
+            tokens[token[i]] = func;
+        }
+    }
+
+    function addWeekParseToken (token, callback) {
+        addParseToken(token, function (input, array, config, token) {
+            config._w = config._w || {};
+            callback(input, config._w, config, token);
+        });
+    }
+
+    function addTimeToArrayFromToken(token, input, config) {
+        if (input != null && hasOwnProp(tokens, token)) {
+            tokens[token](input, config._a, config, token);
+        }
+    }
+
+    var YEAR = 0;
+    var MONTH = 1;
+    var DATE = 2;
+    var HOUR = 3;
+    var MINUTE = 4;
+    var SECOND = 5;
+    var MILLISECOND = 6;
+    var WEEK = 7;
+    var WEEKDAY = 8;
+
+    // FORMATTING
+
+    addFormatToken('Y', 0, 0, function () {
+        var y = this.year();
+        return y <= 9999 ? '' + y : '+' + y;
+    });
+
+    addFormatToken(0, ['YY', 2], 0, function () {
+        return this.year() % 100;
+    });
+
+    addFormatToken(0, ['YYYY',   4],       0, 'year');
+    addFormatToken(0, ['YYYYY',  5],       0, 'year');
+    addFormatToken(0, ['YYYYYY', 6, true], 0, 'year');
+
+    // ALIASES
+
+    addUnitAlias('year', 'y');
+
+    // PRIORITIES
+
+    addUnitPriority('year', 1);
+
+    // PARSING
+
+    addRegexToken('Y',      matchSigned);
+    addRegexToken('YY',     match1to2, match2);
+    addRegexToken('YYYY',   match1to4, match4);
+    addRegexToken('YYYYY',  match1to6, match6);
+    addRegexToken('YYYYYY', match1to6, match6);
+
+    addParseToken(['YYYYY', 'YYYYYY'], YEAR);
+    addParseToken('YYYY', function (input, array) {
+        array[YEAR] = input.length === 2 ? hooks.parseTwoDigitYear(input) : toInt(input);
+    });
+    addParseToken('YY', function (input, array) {
+        array[YEAR] = hooks.parseTwoDigitYear(input);
+    });
+    addParseToken('Y', function (input, array) {
+        array[YEAR] = parseInt(input, 10);
+    });
+
+    // HELPERS
+
+    function daysInYear(year) {
+        return isLeapYear(year) ? 366 : 365;
+    }
+
+    function isLeapYear(year) {
+        return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    }
+
+    // HOOKS
+
+    hooks.parseTwoDigitYear = function (input) {
+        return toInt(input) + (toInt(input) > 68 ? 1900 : 2000);
+    };
+
+    // MOMENTS
+
+    var getSetYear = makeGetSet('FullYear', true);
+
+    function getIsLeapYear () {
+        return isLeapYear(this.year());
+    }
+
+    function makeGetSet (unit, keepTime) {
+        return function (value) {
+            if (value != null) {
+                set$1(this, unit, value);
+                hooks.updateOffset(this, keepTime);
+                return this;
+            } else {
+                return get(this, unit);
+            }
+        };
+    }
+
+    function get (mom, unit) {
+        return mom.isValid() ?
+            mom._d['get' + (mom._isUTC ? 'UTC' : '') + unit]() : NaN;
+    }
+
+    function set$1 (mom, unit, value) {
+        if (mom.isValid() && !isNaN(value)) {
+            if (unit === 'FullYear' && isLeapYear(mom.year()) && mom.month() === 1 && mom.date() === 29) {
+                mom._d['set' + (mom._isUTC ? 'UTC' : '') + unit](value, mom.month(), daysInMonth(value, mom.month()));
+            }
+            else {
+                mom._d['set' + (mom._isUTC ? 'UTC' : '') + unit](value);
+            }
+        }
+    }
+
+    // MOMENTS
+
+    function stringGet (units) {
+        units = normalizeUnits(units);
+        if (isFunction(this[units])) {
+            return this[units]();
+        }
+        return this;
+    }
+
+
+    function stringSet (units, value) {
+        if (typeof units === 'object') {
+            units = normalizeObjectUnits(units);
+            var prioritized = getPrioritizedUnits(units);
+            for (var i = 0; i < prioritized.length; i++) {
+                this[prioritized[i].unit](units[prioritized[i].unit]);
+            }
+        } else {
+            units = normalizeUnits(units);
+            if (isFunction(this[units])) {
+                return this[units](value);
+            }
+        }
+        return this;
+    }
+
+    function mod(n, x) {
+        return ((n % x) + x) % x;
+    }
+
+    var indexOf;
+
+    if (Array.prototype.indexOf) {
+        indexOf = Array.prototype.indexOf;
+    } else {
+        indexOf = function (o) {
+            // I know
+            var i;
+            for (i = 0; i < this.length; ++i) {
+                if (this[i] === o) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+    }
+
+    function daysInMonth(year, month) {
+        if (isNaN(year) || isNaN(month)) {
+            return NaN;
+        }
+        var modMonth = mod(month, 12);
+        year += (month - modMonth) / 12;
+        return modMonth === 1 ? (isLeapYear(year) ? 29 : 28) : (31 - modMonth % 7 % 2);
+    }
+
+    // FORMATTING
+
+    addFormatToken('M', ['MM', 2], 'Mo', function () {
+        return this.month() + 1;
+    });
+
+    addFormatToken('MMM', 0, 0, function (format) {
+        return this.localeData().monthsShort(this, format);
+    });
+
+    addFormatToken('MMMM', 0, 0, function (format) {
+        return this.localeData().months(this, format);
+    });
+
+    // ALIASES
+
+    addUnitAlias('month', 'M');
+
+    // PRIORITY
+
+    addUnitPriority('month', 8);
+
+    // PARSING
+
+    addRegexToken('M',    match1to2);
+    addRegexToken('MM',   match1to2, match2);
+    addRegexToken('MMM',  function (isStrict, locale) {
+        return locale.monthsShortRegex(isStrict);
+    });
+    addRegexToken('MMMM', function (isStrict, locale) {
+        return locale.monthsRegex(isStrict);
+    });
+
+    addParseToken(['M', 'MM'], function (input, array) {
+        array[MONTH] = toInt(input) - 1;
+    });
+
+    addParseToken(['MMM', 'MMMM'], function (input, array, config, token) {
+        var month = config._locale.monthsParse(input, token, config._strict);
+        // if we didn't find a month name, mark the date as invalid.
+        if (month != null) {
+            array[MONTH] = month;
+        } else {
+            getParsingFlags(config).invalidMonth = input;
+        }
+    });
+
+    // LOCALES
+
+    var MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/;
+    var defaultLocaleMonths = 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_');
+    function localeMonths (m, format) {
+        if (!m) {
+            return isArray(this._months) ? this._months :
+                this._months['standalone'];
+        }
+        return isArray(this._months) ? this._months[m.month()] :
+            this._months[(this._months.isFormat || MONTHS_IN_FORMAT).test(format) ? 'format' : 'standalone'][m.month()];
+    }
+
+    var defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_');
+    function localeMonthsShort (m, format) {
+        if (!m) {
+            return isArray(this._monthsShort) ? this._monthsShort :
+                this._monthsShort['standalone'];
+        }
+        return isArray(this._monthsShort) ? this._monthsShort[m.month()] :
+            this._monthsShort[MONTHS_IN_FORMAT.test(format) ? 'format' : 'standalone'][m.month()];
+    }
+
+    function handleStrictParse(monthName, format, strict) {
+        var i, ii, mom, llc = monthName.toLocaleLowerCase();
+        if (!this._monthsParse) {
+            // this is not used
+            this._monthsParse = [];
+            this._longMonthsParse = [];
+            this._shortMonthsParse = [];
+            for (i = 0; i < 12; ++i) {
+                mom = createUTC([2000, i]);
+                this._shortMonthsParse[i] = this.monthsShort(mom, '').toLocaleLowerCase();
+                this._longMonthsParse[i] = this.months(mom, '').toLocaleLowerCase();
+            }
+        }
+
+        if (strict) {
+            if (format === 'MMM') {
+                ii = indexOf.call(this._shortMonthsParse, llc);
+                return ii !== -1 ? ii : null;
+            } else {
+                ii = indexOf.call(this._longMonthsParse, llc);
+                return ii !== -1 ? ii : null;
+            }
+        } else {
+            if (format === 'MMM') {
+                ii = indexOf.call(this._shortMonthsParse, llc);
+                if (ii !== -1) {
+                    return ii;
+                }
+                ii = indexOf.call(this._longMonthsParse, llc);
+                return ii !== -1 ? ii : null;
+            } else {
+                ii = indexOf.call(this._longMonthsParse, llc);
+                if (ii !== -1) {
+                    return ii;
+                }
+                ii = indexOf.call(this._shortMonthsParse, llc);
+                return ii !== -1 ? ii : null;
+            }
+        }
+    }
+
+    function localeMonthsParse (monthName, format, strict) {
+        var i, mom, regex;
+
+        if (this._monthsParseExact) {
+            return handleStrictParse.call(this, monthName, format, strict);
+        }
+
+        if (!this._monthsParse) {
+            this._monthsParse = [];
+            this._longMonthsParse = [];
+            this._shortMonthsParse = [];
+        }
+
+        // TODO: add sorting
+        // Sorting makes sure if one month (or abbr) is a prefix of another
+        // see sorting in computeMonthsParse
+        for (i = 0; i < 12; i++) {
+            // make the regex if we don't have it already
+            mom = createUTC([2000, i]);
+            if (strict && !this._longMonthsParse[i]) {
+                this._longMonthsParse[i] = new RegExp('^' + this.months(mom, '').replace('.', '') + '$', 'i');
+                this._shortMonthsParse[i] = new RegExp('^' + this.monthsShort(mom, '').replace('.', '') + '$', 'i');
+            }
+            if (!strict && !this._monthsParse[i]) {
+                regex = '^' + this.months(mom, '') + '|^' + this.monthsShort(mom, '');
+                this._monthsParse[i] = new RegExp(regex.replace('.', ''), 'i');
+            }
+            // test the regex
+            if (strict && format === 'MMMM' && this._longMonthsParse[i].test(monthName)) {
+                return i;
+            } else if (strict && format === 'MMM' && this._shortMonthsParse[i].test(monthName)) {
+                return i;
+            } else if (!strict && this._monthsParse[i].test(monthName)) {
+                return i;
+            }
+        }
+    }
+
+    // MOMENTS
+
+    function setMonth (mom, value) {
+        var dayOfMonth;
+
+        if (!mom.isValid()) {
+            // No op
+            return mom;
+        }
+
+        if (typeof value === 'string') {
+            if (/^\d+$/.test(value)) {
+                value = toInt(value);
+            } else {
+                value = mom.localeData().monthsParse(value);
+                // TODO: Another silent failure?
+                if (!isNumber(value)) {
+                    return mom;
+                }
+            }
+        }
+
+        dayOfMonth = Math.min(mom.date(), daysInMonth(mom.year(), value));
+        mom._d['set' + (mom._isUTC ? 'UTC' : '') + 'Month'](value, dayOfMonth);
+        return mom;
+    }
+
+    function getSetMonth (value) {
+        if (value != null) {
+            setMonth(this, value);
+            hooks.updateOffset(this, true);
+            return this;
+        } else {
+            return get(this, 'Month');
+        }
+    }
+
+    function getDaysInMonth () {
+        return daysInMonth(this.year(), this.month());
+    }
+
+    var defaultMonthsShortRegex = matchWord;
+    function monthsShortRegex (isStrict) {
+        if (this._monthsParseExact) {
+            if (!hasOwnProp(this, '_monthsRegex')) {
+                computeMonthsParse.call(this);
+            }
+            if (isStrict) {
+                return this._monthsShortStrictRegex;
+            } else {
+                return this._monthsShortRegex;
+            }
+        } else {
+            if (!hasOwnProp(this, '_monthsShortRegex')) {
+                this._monthsShortRegex = defaultMonthsShortRegex;
+            }
+            return this._monthsShortStrictRegex && isStrict ?
+                this._monthsShortStrictRegex : this._monthsShortRegex;
+        }
+    }
+
+    var defaultMonthsRegex = matchWord;
+    function monthsRegex (isStrict) {
+        if (this._monthsParseExact) {
+            if (!hasOwnProp(this, '_monthsRegex')) {
+                computeMonthsParse.call(this);
+            }
+            if (isStrict) {
+                return this._monthsStrictRegex;
+            } else {
+                return this._monthsRegex;
+            }
+        } else {
+            if (!hasOwnProp(this, '_monthsRegex')) {
+                this._monthsRegex = defaultMonthsRegex;
+            }
+            return this._monthsStrictRegex && isStrict ?
+                this._monthsStrictRegex : this._monthsRegex;
+        }
+    }
+
+    function computeMonthsParse () {
+        function cmpLenRev(a, b) {
+            return b.length - a.length;
+        }
+
+        var shortPieces = [], longPieces = [], mixedPieces = [],
+            i, mom;
+        for (i = 0; i < 12; i++) {
+            // make the regex if we don't have it already
+            mom = createUTC([2000, i]);
+            shortPieces.push(this.monthsShort(mom
