@@ -9,6 +9,9 @@
         "User Profile Value": [1, true, true, "Shows users' total Recent Average Price on their profile page."],
         "User Profile RAP": [1, true, true, "Shows users' total value on their profile page."],
         "Total Win/Loss": [1, true, true, "Shows the current trade's total win amount to the right of the trade decline button."],
+        "Current Value Provider Display":[1, true, true, "Displays the current value provider you have active directly above the trades list on the trades page."],
+        "Send Trade Button": [1, true, true, "Adds an option to send a trade to the active user beisdes the normal Counter trade option."],
+        "Send Trade Button - Open in new tab": [1, true, false, "Determines whether the Send Trade Button will open the new trade in a new tab."],
         "Flagging":
         {
             "Flag Projecteds": [1, true, false, "Flags projected items with a warning symbol. Projected items are items that have been purchased at a price much higher than their value, in order to artificially inflate their RAP( Recent Average Price )."],
@@ -21,15 +24,15 @@
         {
             "rolimons.com General Item Link": [1, true, false, "Adds a button that links to each item's general page on rolimons.com."],
             "rolimons.com UAID specific Item Link": [1, true, false, "Adds a button that links to each item's specific page on rolimons.com."],
+            "rolimons.com User Link": [1, true, false, "Adds a button that links to the sender of each trade's user page on rolimons.com."],
             "rblx.trade General Item Link": [1, false, false, "Adds a button that links to each item's general page on rblx.trade."],
             "rblx.trade UAID Specific Item Link": [1, false, false, "Adds a button that links to each item's specific page on rblx.trade."],
-            "rolimons.com User Link": [1, true, false, "Adds a button that links to the sender of each trade's user page on rolimons.com."],
             "rblx.trade User Link": [1, false, false, "Adds a button that links to the sender of each trade's user page on rblx.trade."]
         }
     },
     "Tools":
     {
-        "Automation Widget": [1, false, true, "A tool that allows for the automation of tasks such as declining bad inbound trades, and removing followers. &#13;&#10;&#13;&#10;Inbound Declining:&#13;&#10;Decline Value Losses: Determines if losses will be declined based on the amount of value gained / lossed.&#13;&#10;&#13;&#10;Decline Threshold: Determines how much you need to be losing for a trade to be declined. For instance, if this is set to .15, all trades where you are losing 15% of the trade's value will be declined. If you don't understand what this means, it is suggested to leave this value at .15. *This parameter doesn't matter if you don't enable Decline Value Losses*&#13;&#10;&#13;&#10;Decline Projects: If enabled the extension will decline all trades that include projecteds on the recieving side.&#13;&#10;&#13;&#10;Max Decline Amount: Determines the max amount of the extension is allowed to decline before stopping.&#13;&#10;&#13;Whitelisted Users: The extension will skip over declining trades by these users. Example input: 1429560605, HappyRobloxian20000, KDJ"]
+        "Automation Widget": [1, true, true, "A tool that allows for the automation of tasks such as declining bad inbound trades, and removing followers. &#13;&#10;&#13;&#10;Inbound Declining:&#13;&#10;Decline Value Losses: Determines if losses will be declined based on the amount of value gained / lossed.&#13;&#10;&#13;&#10;Decline Threshold: Determines how much you need to be losing for a trade to be declined. For instance, if this is set to .15, all trades where you are losing 15% of the trade's value will be declined. If you don't understand what this means, it is suggested to leave this value at .15. *This parameter doesn't matter if you don't enable Decline Value Losses*&#13;&#10;&#13;&#10;Decline Projects: If enabled the extension will decline all trades that include projecteds on the recieving side.&#13;&#10;&#13;&#10;Max Decline Amount: Determines the max amount of the extension is allowed to decline before stopping.&#13;&#10;&#13;Whitelisted Users: The extension will skip over declining trades by these users. Example input: 1429560605, HappyRobloxian20000, KDJ"]
     },
     "Other":
     {
