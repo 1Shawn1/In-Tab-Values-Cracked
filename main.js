@@ -73,16 +73,15 @@ fetch(chrome.runtime.getURL("sideValueBox.html")).then(async (response) => {
 function saveLocal(name, value) {
     var items = {};
     items[name] = value
-    chrome.storage.local.set(items, function() {});
+    chrome.storage.local.set(items, function () { });
 }
 
 async function getFromStorageLocal(name) {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(name, async function(items) {
-            let globalData = await getGlobalData()
-
+        chrome.storage.local.get(name, async function (items) {
             value = items[name]
             if (value == undefined) {
+                let globalData = await getGlobalData()
                 for (let key in globalData) {
                     if (globalData.hasOwnProperty(key)) {
                         for (let thisKey in globalData[key]) {
@@ -138,27 +137,6 @@ function sleep(milliseconds) {
     } while (currentDate - date < milliseconds);
 }
 
-let recentTradeData = null
-let updateRecentTradeDataDebounce = false
-let gatheringDataSideValueDebounce = false
-async function updateRecentTradeData() {
-    gatheringDataSideValueDebounce = false
-    //if (updateRecentTradeDataDebounce == true){
-    updateRecentTradeDataDebounce = false
-    let thisurl = "https://trades.roblox.com/v1/trades/Inbound?sortOrder=Asc&limit=100"
-    let request_response = await sendGETRequest(thisurl)
-    recentTradeData = request_response
-
-    gatheringDataSideValueDebounce = true
-    setTimeout(function() {
-        updateRecentTradeDataDebounce = true
-    }, 1000)
-
-    //} 
-}
-
-
-updateRecentTradeData()
 async function sendGETRequest(url) {
     try {
         let response = await fetch(url, {
@@ -167,16 +145,13 @@ async function sendGETRequest(url) {
         })
         if (response.ok) {
             let json = await response.json();
-
             return json
+        } else {
+            return null
         }
-
-
     } catch {
         return null
     }
-
-
 }
 
 function parseForTable(string) {
@@ -192,9 +167,9 @@ function parseForTable(string) {
 }
 
 async function checkChart(user_id) {
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
         let sus = false
-        $.get('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.rolimons.com/player/' + String(user_id)), function(data) {
+        $.get('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.rolimons.com/player/' + String(user_id)), function (data) {
             let text = data.contents
             let json = parseForTable(text)
             let num_points = json.num_points
@@ -202,15 +177,15 @@ async function checkChart(user_id) {
 
             let current_value = valuedata[valuedata.length - 1]
 
-            let getMean = function(data) {
-                return data.reduce(function(a, b) {
+            let getMean = function (data) {
+                return data.reduce(function (a, b) {
                     return Number(a) + Number(b);
                 }) / data.length;
             };
 
-            let getSD = function(data) {
+            let getSD = function (data) {
                 let m = getMean(data);
-                return Math.sqrt(data.reduce(function(sq, n) {
+                return Math.sqrt(data.reduce(function (sq, n) {
                     return sq + Math.pow(n - m, 2);
                 }, 0) / (data.length - 1));
             };
@@ -240,8 +215,8 @@ async function checkChart(user_id) {
 }
 
 //adds commas to number
-String.prototype.commafy = function() {
-    return this.replace(/(^|[^\w.])(\d{4,})/g, function($0, $1, $2) {
+String.prototype.commafy = function () {
+    return this.replace(/(^|[^\w.])(\d{4,})/g, function ($0, $1, $2) {
         return $1 + $2.replace(/\d(?=(?:\d\d\d)+(?!\d))/g, "$&,");
     });
 };
@@ -281,7 +256,6 @@ async function chart(item_id) {
 
         thisdata.push(table)
     }
-
     let div = document.createElement("div")
     div.style.height = "350px"
     div.style.width = "80%"
@@ -289,23 +263,13 @@ async function chart(item_id) {
     div.style.position = "relative"
     document.body.appendChild(div)
 
-
-
-
     let canvas = document.createElement("canvas")
-
     canvas.id = "myChart"
     div.appendChild(canvas);
-
     //SCROLL
-
-    $('html, body').animate({ scrollTop: $(canvas).offset().top - 800 }, 1000);
-
-
+    window.scrollTo(0, document.body.scrollHeight);
     let myChart = document.getElementById('myChart').getContext('2d');
-
     // Global Options
-
     Chart.defaults.global.defaultFontFamily = 'HCo Gotham SSm,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif';
     Chart.defaults.global.defaultFontSize = 9;
     Chart.defaults.global.defaultFontColor = generalFontColor;
@@ -361,7 +325,7 @@ async function chart(item_id) {
                     },
                     ticks: {
                         beginAtZero: true,
-                        userCallback: function(value, index, values) {
+                        userCallback: function (value, index, values) {
                             value = value.toString();
 
                             return value.commafy()
@@ -394,7 +358,7 @@ async function chart(item_id) {
                 bodyFontColor: generalFontColor,
                 titleFontColor: generalFontColor,
                 callbacks: {
-                    label: function(tooltipItem, data) {
+                    label: function (tooltipItem, data) {
                         var tooltipValue = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
 
                         return "Sale price: " + String(tooltipValue.y).commafy()
@@ -439,7 +403,7 @@ async function chart(item_id) {
     div.appendChild(img);
 
 
-    img.addEventListener("click", function() {
+    img.addEventListener("click", function () {
         if (document.getElementById("myChart") != null) {
 
             document.getElementById("myChart").parentElement.remove()
@@ -462,7 +426,7 @@ async function chart(item_id) {
 
 
 function sort_object(obj) {
-    return Object.keys(obj).sort().reduce(function(result, key) {
+    return Object.keys(obj).sort().reduce(function (result, key) {
 
         result[String(key)] = obj[key];
         return result;
@@ -493,8 +457,37 @@ function retrieveCSRFToken() {
 }
 var canCleanTrades = true
 
+async function declineTrade(tradeId) {
+    return await new Promise(async (resolve, reject) => {
+        fetch(`https://trades.roblox.com/v1/trades/${tradeId}/decline`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "X-CSRF-TOKEN": retrieveCSRFToken()
+            }
+        }).then((res) => {
+            console.log(res)
+            if (res.status == 200) {
+                chrome.runtime.sendMessage({
+                    command: "tradeDeclined",
+                    data: tradeId
+                })
+                resolve(true)
+            } else {
+                resolve(false)
+            }
+        }).catch((error) => {
+            console.log(error)
+            resolve(false)
+        });
+    })
+}
+
+function isInbound() {
+    return $(document.querySelector("#trades-container > div > div.ng-scope > div > div > div.col-xs-12.col-sm-8.trades-list-detail > div > div.trade-buttons > button:nth-child(2)")).is(":visible");
+}
 function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, maxDeclineAmount, whitelistedUsers) {
-    let waitTime = 10
+    const waitTime = 200
     let values = window.values
 
     let automationWidget = document.getElementById("automationwidget")
@@ -509,70 +502,33 @@ function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, ma
                 startDecline.innerHTML = `Trades scanned: ${processed} Trades declined: ${declined}`
             }
             updateStatus(0, 0)
-            async function declineTrade(tradeId) {
-                return await new Promise(async (resolve, reject) => {
-                    fetch(`https://trades.roblox.com/v1/trades/${tradeId}/decline`, {
-                        method: "POST",
-                        credentials: "include",
-                        headers: {
-                            "X-CSRF-TOKEN": retrieveCSRFToken()
-                        }
-                    }).then((res) => {
-                        console.log(res)
-                        if (res.status == 200) {
-                            chrome.runtime.sendMessage({
-                                command: "tradeDeclined",
-                                data: tradeId
-                            })
-                            resolve(true)
-                        } else {
-                            resolve(false)
-                        }
-                    }).catch((error) => {
-                        console.log(error)
-                        resolve(false)
-                    });
-                })
-            }
 
             var item_data = values.items
-            let tradeCache = await getFromStorageLocal("tradeCache")
+            const tradeCache = await getFromStorageLocal("tradeCache")
             let retries = 0
+            const keys = Object.keys(tradeCache)
             async function cacheLoop(index) {
-                if ((index === tradeCache.length || index === Number(maxDeclineAmount)) && index !== 0) { //not index + because we want it to scan the last trade
+                if ((index === Object.keys(tradeCache).length || index === Number(maxDeclineAmount)) && index !== 0) { //not index + because we want it to scan the last trade
                     //all trades have been scanned, finish
-                    console.log('done')
-                    startDecline.innerHTML += "<br>Cleaning Up..."
-                    chrome.runtime.sendMessage({
-                        command: "cleanUpTrades"
-                    })
-                    chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) { //listens for requests from background page
-                        if (request.command == 'cleanUpTradesDone') {
-                            sendResponse(true);
-                            canCleanTrades = true
-                            let dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown open")[0]
-                            if (dropdown == undefined) {
-                                //not open
-                                dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown")[0]
-                                let dropdownButton = dropdown.getElementsByClassName('input-dropdown-btn')[0]
-                                dropdownButton.click();
-                                let inboundButton = document.getElementById("tab-Inbound")
-                                inboundButton.getElementsByTagName("a")[0].click();
-                            } else {
-                                //open
-                                let inboundButton = document.getElementById("tab-Inbound")
-                                inboundButton.getElementsByTagName("a")[0].click();
-                            }
-
-                            startDecline.innerHTML += "<br>Completed!"
-                            return resolve()
-                        };
-                    })
-
+                    let dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown open")[0]
+                    if (dropdown == undefined) {
+                        //not open
+                        dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown")[0]
+                        let dropdownButton = dropdown.getElementsByClassName('input-dropdown-btn')[0]
+                        dropdownButton.click();
+                        let inboundButton = document.getElementById("tab-Inbound")
+                        inboundButton.getElementsByTagName("a")[0].click();
+                    } else {
+                        //open
+                        let inboundButton = document.getElementById("tab-Inbound")
+                        inboundButton.getElementsByTagName("a")[0].click();
+                    }
+                    startDecline.innerHTML += "<br>Completed!"
+                    return resolve()
                 } else {
-                    let cachedTrade = tradeCache[index]
+                    let cachedTrade = tradeCache[keys[index]]
                     if (cachedTrade !== null) {
-                        let data = cachedTrade[1]
+                        let data = cachedTrade
                         let total1 = 0
                         let total2 = 0
                         let myUserId = getMeta("data-userid")
@@ -605,47 +561,46 @@ function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, ma
                         if (whitelistedUsers.indexOf(String(data.user.id)) == -1 && whitelistedUsers.indexOf(String(data.user.name)) == -1 && whitelistedUsers.indexOf(String(data.user.displayName)) == -1) {
                             let minimumLossNumber = (total1 + myRobux) * declineThreshold
                             if (((total1 + myRobux) - minimumLossNumber > (total2 + theirRobux) && declineValueLosses == true) || (declineProjecteds == true && isProjected)) {
-                                let response = await declineTrade(cachedTrade[0])
+                                let response = await declineTrade(cachedTrade.id)
                                 if (response) {
                                     console.log("declined trade: " + total1 + " : " + total2)
                                     declined++
                                     index++
                                     retries = 0
                                     updateStatus(index, declined)
-                                    setTimeout(function() {
+                                    setTimeout(function () {
                                         cacheLoop(index)
-                                    }, 10)
+                                    }, waitTime)
                                 } else {
                                     if (retries < 3) {
                                         retries++
                                         updateStatus(index, declined)
-                                        setTimeout(function() {
+                                        setTimeout(function () {
                                             cacheLoop(index)
-                                        }, 100)
+                                        }, waitTime * 5)
                                     } else {
                                         index++
                                         updateStatus(index, declined)
-                                        setTimeout(function() {
+                                        setTimeout(function () {
                                             cacheLoop(index)
-                                        }, 10)
+                                        }, waitTime)
                                     }
-
                                 }
                             } else {
                                 //trade doesn't need to be declined, continue
-                                setTimeout(function() {
+                                setTimeout(function () {
                                     index++
                                     updateStatus(index, declined)
                                     cacheLoop(index)
-                                }, 10)
+                                }, waitTime)
                             }
                         } else {
                             //current trade is null, continue
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 index++
                                 updateStatus(index, declined)
                                 cacheLoop(index)
-                            }, 10)
+                            }, waitTime)
                         }
                     }
                 }
@@ -655,6 +610,69 @@ function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, ma
     })
 }
 
+function declineAllTrades() {
+    return new Promise(async resolve => {
+        let tradeCount = await sendGETRequest('https://trades.roblox.com/v1/trades/Inbound/count')
+        tradeCount = tradeCount.count
+
+        let startAllDecline = document.getElementById("declineAllButton")
+        let declined = 0;
+        function updateStatus() {
+            startAllDecline.innerHTML = `Trades declined: ${declined}/${tradeCount}`
+        }
+        updateStatus()
+        canCleanTrades = false
+        let pageCursor = ""
+
+        async function run() {
+            data = await sendGETRequest(`https://trades.roblox.com/v1/trades/Inbound?sortOrder=Asc&limit=100&cursor=${pageCursor}`)
+            if (data != null) {
+                tradesData = data.data;
+                pageCursor = data.nextPageCursor;
+                for (var key in tradesData) {
+                    if (tradesData.hasOwnProperty(key)) {
+                        await declineTrade(tradesData[key].id)
+                        console.log('declined trade')
+                        declined++
+                        updateStatus()
+                    }
+                }
+                console.log('done')
+                if (pageCursor !== null) {
+                    run();
+                } else {
+                    startAllDecline.innerHTML += "<br>Completed!"
+
+                    let dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown open")[0]
+                    if (dropdown == undefined) {
+                        //not open
+                        dropdown = document.getElementsByClassName("input-group-btn group-dropdown trade-list-dropdown")[0]
+                        let dropdownButton = dropdown.getElementsByClassName('input-dropdown-btn')[0]
+                        dropdownButton.click();
+                        let inboundButton = document.getElementById("tab-Inbound")
+                        inboundButton.getElementsByTagName("a")[0].click();
+                    } else {
+                        //open
+                        let inboundButton = document.getElementById("tab-Inbound")
+                        inboundButton.getElementsByTagName("a")[0].click();
+                    }
+
+                    setTimeout(() => {
+                        startAllDecline.innerHTML = "Start Declining All Inbound Trades"
+                        canCleanTrades = true
+                        resolve()
+                    }, 3000);
+                }
+            } else {
+                waitTime = 7000;
+                await timer(waitTime);
+                canCleanTrades = true;
+                run();
+            }
+        }
+        run()
+    });
+}
 function getFilterModeNumber(filterMode) {
     if (filterMode == 0) {
         filterMode = 0
@@ -692,11 +710,12 @@ async function removeFollowing(maxRemoveAmount, whitelistedUsers) {
     let first = true
 
     function run(nextPageCursor) {
+        const myUserId = getMeta("data-userid")
         if (nextPageCursor != null || first == true) {
             first = false
             $.get(
-                "https://friends.roblox.com/v1/users/1429560605/followings?sortOrder=Asc&limit=100&nextPageCursor=" + nextPageCursor, {},
-                function(data) {
+                `https://friends.roblox.com/v1/users/${myUserId}/followings?sortOrder=Asc&limit=100&nextPageCursor=` + nextPageCursor, {},
+                function (data) {
                     nextPageCursor = data.nextPageCursor
                     data = data.data
                     let i = 0
@@ -704,7 +723,7 @@ async function removeFollowing(maxRemoveAmount, whitelistedUsers) {
                     function loop() {
                         if (data[i] == undefined && (processed >= maxRemoveAmount && processed != 0)) {
                             if (nextPageCursor != null) {
-                                setTimeout(function() { run(nextPageCursor) }, 5000);
+                                setTimeout(function () { run(nextPageCursor) }, 5000);
                             } else {
                                 startRemove.innerHTML += "<br>Completed!"
                             }
@@ -720,7 +739,7 @@ async function removeFollowing(maxRemoveAmount, whitelistedUsers) {
                                 withCredentials: true
                             }
                         });
-                        $.post('https://friends.roblox.com/v1/users/' + parseInt(data[i].id) + '/unfollow', {}, function(response, status) {
+                        $.post('https://friends.roblox.com/v1/users/' + parseInt(data[i].id) + '/unfollow', {}, function (response, status) {
                             if (status == "success") {
                                 declined++
                             }
@@ -735,12 +754,12 @@ async function removeFollowing(maxRemoveAmount, whitelistedUsers) {
             );
         }
     }
-    run()
+    run("")
 }
 
 var x, y, target = null;
 
-document.addEventListener('mousedown', function(e) {
+document.addEventListener('mousedown', function (e) {
     var clickedDragger = false;
     e.path = e.composedPath()
     for (var i = 0; e.path[i] !== document.body; i++) {
@@ -756,12 +775,12 @@ document.addEventListener('mousedown', function(e) {
     }
 });
 
-document.addEventListener('mouseup', function() {
+document.addEventListener('mouseup', function () {
     if (target !== null) target.classList.remove('dragging');
     target = null;
 });
 
-document.addEventListener('mousemove', function(e) {
+document.addEventListener('mousemove', function (e) {
     if (target === null) return;
     target.style.left = e.clientX - x + 'px';
     target.style.top = e.clientY - y + 'px';
@@ -775,9 +794,11 @@ document.addEventListener('mousemove', function(e) {
 });
 
 //creates the "Trade Filterer" GUI, and injects it into the pages
+let canSetUpGUI = true
 async function setUpGUI() {
     let test = document.getElementById("automationwidget")
-    if (test == null) {
+    if (test == null && document.URL.indexOf("/trades") != -1 && canSetUpGUI) {
+        canSetUpGUI = false
 
         let mainframe = document.getElementById("container-main");
         let url = chrome.runtime.getURL("automationwidget.html")
@@ -785,7 +806,7 @@ async function setUpGUI() {
         xhr.open("GET", url, true);
         xhr.send();
 
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             if (this.readyState == 4 && this.status == 200) {
                 let finalInsertString = xhr.response
                 mainframe.insertAdjacentHTML('afterbegin', finalInsertString);
@@ -794,7 +815,7 @@ async function setUpGUI() {
                 url = chrome.runtime.getURL("icons/primary.png");
                 theseIcons = Array.from(automationWidget.getElementsByClassName("icons_ITV"))
 
-                theseIcons.forEach(function(img) {
+                theseIcons.forEach(function (img) {
                     img.src = url
                 })
 
@@ -804,18 +825,22 @@ async function setUpGUI() {
                     automationWidget.style.setProperty("background-color", "#f2f4f5", "important");
                 }
 
-
-                $("#automation-hide-button").click(function() {
-                    if ($(this).html() == "-") {
-                        $(this).html("+");
+                let automationHideBox = $("#automation-hide-box")
+                let automationHideButton = $("#automation-hide-button")
+                function toggleWidget() {
+                    if (automationHideButton.html() == "-") {
+                        automationHideButton.html("+");
                     } else {
-                        $(this).html("-");
+                        automationHideButton.html("-");
                     }
-                    $("#automation-hide-box").slideToggle();
-                });
+                    automationHideBox.slideToggle();
+                }
+                automationHideButton.click(toggleWidget);
+                toggleWidget();
+                canSetUpGUI = true
 
                 let startDecline = document.getElementById("declineButton")
-                startDecline.addEventListener("click", async function() {
+                startDecline.addEventListener("click", async function () {
                     if (canCleanTrades == true) {
                         let declineValueLosses = automationWidget.getElementsByClassName("value")[0].checked
                         let declineThreshold = automationWidget.getElementsByClassName("value")[1].value
@@ -828,23 +853,37 @@ async function setUpGUI() {
                         if (declineValueLosses || declineProjecteds) {
                             await cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, maxDeclineAmount, whitelistedUsers)
                         }
-                        startDecline.innerHTML = "Start Declining Inbound Trades"
-
+                        setTimeout(() => {
+                            startDecline.innerHTML = "Start Declining Inbound Trades"
+                            canCleanTrades = true
+                        }, 3000)
                         //set to a negative number to decline when any less that winning that much, set to a positive number to decline when you're losing at least less than that
                     }
                 }, false);
+
+                let startAllDecline = document.getElementById("declineAllButton")
+                startAllDecline.addEventListener("click", async function () {
+                    if (canCleanTrades) {
+                        if (confirm('This will decline all of your inbound trades. Are you sure you would like to proceed?')) {
+                            declineAllTrades().then(() => {
+                                console.log('done')
+                            })
+                        }
+                    }
+                }, false)
+
                 let startRemoveFollowing = document.getElementById("removeFollowing")
-                startRemoveFollowing.addEventListener("click", async function() {
+                startRemoveFollowing.addEventListener("click", async function () {
                     let maxRemoveAmount = automationWidget.getElementsByClassName("value")[5].value
                     removeFollowing(maxRemoveAmount)
 
                 })
-                Array.from(automationWidget.getElementsByClassName("row")).forEach(async function(row) {
+                Array.from(automationWidget.getElementsByClassName("row")).forEach(async function (row) {
                     let child = row.getElementsByTagName("input")[0]
                     if (child == undefined) {
                         child = row.getElementsByTagName("textarea")[0]
                     }
-                    $(child).on('input', function() {
+                    $(child).on('input', function () {
                         let name = child.parentElement.getElementsByTagName("span")[0].innerHTML
                         if (child.classList.contains("checkbox")) {
                             name = child.parentElement.parentElement.getElementsByTagName("span")[0].innerHTML
@@ -872,7 +911,7 @@ async function setUpGUI() {
 //value handling
 var values
 var brackets
-String.prototype.replaceAt = function(index, replacement) {
+String.prototype.replaceAt = function (index, replacement) {
     return this.substr(0, index) + replacement + this.substr(index + replacement.length);
 }
 
@@ -909,26 +948,17 @@ function realBackgroundColor(elem) {
         return bg;
     }
 }
-
-
-
-
 var canSideValues = true
 
 function findInCache(this_cache, id) {
     let value = false
-
     if (this_cache != []) {
-        this_cache.forEach(function(trade, index) {
-
-
+        this_cache.forEach(function (trade, index) {
             if (trade['id'] == id) {
-
                 value = trade
             }
         })
     }
-
     return value
 }
 let canSideValuePreview = null
@@ -948,161 +978,213 @@ function getMeta(metaName) {
 
     return '';
 }
+
+let cursor = "";
+let loadedTradeCount = 0
+let loadingTrades = false
+let tradesDeclinedSinceLastLoad = 0
 let selectedId = null
+let tradesType = 'inbound'
 
 function tradeDeclined() {
-    console.log(selectedId)
+    console.log(selectedId);
     chrome.runtime.sendMessage({
         command: "tradeDeclined",
         data: selectedId
     })
+    tradesDeclinedSinceLastLoad++;
 }
 
-async function sideValues() {
-    let dataTrade = document.querySelector(`[ng-bind="'Action.AcceptTrade' | translate"]`)
-    if (dataTrade != null) {
-        if (!dataTrade.classList.contains('ng-hide')) {
-            if (gatheringDataSideValueDebounce) {
-                if (recentTradeData != null && recentTradeData != false && canSideValues == true && canSideValuePreview && document.readyState == "complete") {
-                    canSideValues = false
+function fetchTrades(tradesType) {
+    return new Promise(async resolve => {
+        data = await sendGETRequest(`https://trades.roblox.com/v1/trades/${tradesType}?cursor=${cursor}&limit=10&sortOrder=Asc`);
+        if (data != null) {
+            if (data.nextPageCursor === null) {
+                //cursor = "";
+            } else {
+                cursor = data.nextPageCursor;
+            }
+            resolve(data.data);
+        } else {
+            resolve(null);
+        }
+    })
+}
 
-                    let tradeCache = await getFromStorageLocal("tradeCache")
-                    let myUserId = getMeta("data-userid")
+function resetLoadTrades() {
+    cursor = "";
+    loadedTradeCount = 0;
+}
 
-                    let values = window.values
-                    if (values != null) {
-                        let item_data = values.items
+async function addTradeListValues(tradeRowContainers) {
+    const tradeCache = await getFromStorageLocal("tradeCache")
+    const values = window.values.items
+    const myUserId = getMeta("data-userid")
 
-                        function findStartingPoint() {
-                            for (const index in recentTradeData.data) {
+    Array.from(tradeRowContainers).forEach((tradeRowContainer, index) => {
+        if (tradeRowContainer.hasAttribute('itvtradeid')) {
+            const tradeid = Number(tradeRowContainer.getAttribute("itvtradeid"));
+            const trade = tradeCache[tradeid] //get trade from cache
+            if (trade) {
+                if (trade.offers[1].user.id == myUserId) {
+                    myAssets = trade.offers[1].userAssets
+                    myRobux = Math.round(trade.offers[1].robux * .7)
+                    theirAssets = trade.offers[0].userAssets
+                    theirRobux = Math.round(trade.offers[0].robux * .7)
+                } else {
+                    myAssets = trade.offers[0].userAssets
+                    myRobux = Math.round(trade.offers[0].robux * .7)
+                    theirAssets = trade.offers[1].userAssets
+                    theirRobux = Math.round(trade.offers[1].robux * .7)
+                }
 
-                                for (const key in tradeCache) {
-                                    if (tradeCache[key][0] === recentTradeData.data[index].id) {
-                                        return index
-                                    }
-                                }
+                function calculateTotal(assets, robux) {
+                    let total = 0
+                    for (let n = 0; n < assets.length; n++) {
+                        const assetId = assets[n].assetId
+                        const value = values[assetId][4]
+                        total += value
+                    }
+                    total += robux
+                    return total
+                }
+                const total1 = calculateTotal(myAssets, myRobux)
+                const total2 = calculateTotal(theirAssets, theirRobux)
+                const gain = Number(total2) - Number(total1)
 
+                let tradeListValueBox = tradeRowContainer.getElementsByClassName("sideValueBox")[0]
+                if (!tradeListValueBox) {
+                    tradeRowContainer.insertAdjacentHTML('afterbegin', sideValueBoxHTML);
+                    tradeListValueBox = tradeRowContainer.getElementsByClassName("sideValueBox")[0]
+
+                    tradeRowContainer.getElementsByClassName("amount-1")[0].innerHTML = String(total1).commafy()
+                    tradeRowContainer.getElementsByClassName("amount-2")[0].innerHTML = String(total2).commafy()
+
+                    if (darkMode()) {
+                        tradeListValueBox.style.setProperty("background-color", "rgb(52 54 56)");
+                        tradeRowContainer.getElementsByClassName("amount-1")[0].style.setProperty("color", "#fff", "important");
+                        tradeRowContainer.getElementsByClassName("amount-2")[0].style.setProperty("color", "#fff", "important");
+                    } else {
+                        tradeListValueBox.style.setProperty("background-color", "rgb(242 244 245)");
+                        tradeRowContainer.getElementsByClassName("amount-1")[0].style.setProperty("color", "#393b3d", "important");
+                        tradeRowContainer.getElementsByClassName("amount-2")[0].style.setProperty("color", "#393b3d", "important");
+                    }
+                    if (gain == 0) {
+                        addMouseOver(tradeListValueBox, iconMouseOverText['tradelistvaluesequal'])
+                    } else {
+                        function setStyle(elem, propertyObject) {
+                            for (var property in propertyObject) {
+                                elem.style[property] = propertyObject[property];
                             }
-                            return null
                         }
-                        let startingPoint = findStartingPoint()
-                        if (startingPoint !== null) {
-                            let tradeRowContainers = document.getElementsByClassName("trade-row-container")
-                            for (let n in tradeRowContainers) {
-                                if (typeof(tradeRowContainers[n]) == "object") {
-                                    let index = n - startingPoint
-                                    if (index >= 0 && tradeCache[index] !== undefined) {
-                                        let data = tradeCache[index][1]
-                                        if (data.offers[1].user.id == myUserId) {
-                                            myAssets = data.offers[1].userAssets
-                                            myRobux = Math.round(data.offers[1].robux * .7)
-                                            theirAssets = data.offers[0].userAssets
-                                            theirRobux = Math.round(data.offers[0].robux * .7)
-                                        } else {
-                                            myAssets = data.offers[0].userAssets
-                                            myRobux = Math.round(data.offers[0].robux * .7)
-                                            theirAssets = data.offers[1].userAssets
-                                            theirRobux = Math.round(data.offers[1].robux * .7)
-                                        }
 
-
-                                        let total1 = 0
-                                        let total2 = 0
-
-                                        for (let n2 = 0; n2 < myAssets.length; n2++) {
-                                            let assetId = myAssets[n2].assetId
-                                            let value = item_data[assetId][4]
-
-                                            total1 += value
-
-                                            let isValued = item_data[assetId][3]
-
-                                            if (isValued == -1) {
-                                                isValued = false
-                                            } else {
-                                                isValued = true
-                                            }
-
-
-
-                                        }
-
-                                        for (let n2 = 0; n2 < theirAssets.length; n2++) {
-                                            let assetId = theirAssets[n2].assetId
-                                            let value = item_data[assetId][4]
-
-                                            total2 += value
-
-                                            let isValued = item_data[assetId][3]
-
-                                            if (isValued == -1) {
-                                                isValued = false
-                                            } else {
-                                                isValued = true
-                                            }
-
-
-                                        }
-                                        total1 += myRobux
-                                        total2 += theirRobux
-                                        let gain = total2 - total1
-
-                                        let tradeRowContainer = tradeRowContainers[n]
-                                        if (tradeRowContainer != undefined) {
-                                            if (tradeRowContainers[n].getElementsByClassName("sideValueBox")[0] === undefined) {
-                                                tradeRowContainer.insertAdjacentHTML('afterbegin', sideValueBoxHTML);
-
-                                                tradeRowContainer.getElementsByClassName("amount-1")[0].innerHTML = String(total1).commafy()
-                                                tradeRowContainer.getElementsByClassName("amount-2")[0].innerHTML = String(total2).commafy()
-                                                tradeRowContainer.setAttribute("data-tradeid", data.id)
-                                                let sideValueBox = tradeRowContainer.getElementsByClassName("sideValueBox")[0]
-                                                if (darkMode()) {
-                                                    $(sideValueBox).css("background-color", "rgb(52 54 56)");
-                                                    tradeRowContainer.getElementsByClassName("amount-1")[0].style.setProperty("color", "#fff", "important");
-                                                    tradeRowContainer.getElementsByClassName("amount-2")[0].style.setProperty("color", "#fff", "important");
-                                                } else {
-                                                    $(sideValueBox).css("background-color", "rgb(242 244 245)");
-                                                    tradeRowContainer.getElementsByClassName("amount-1")[0].style.setProperty("color", "#393b3d", "important");
-                                                    tradeRowContainer.getElementsByClassName("amount-2")[0].style.setProperty("color", "#393b3d", "important");
-                                                }
-                                                if (gain == 0) {
-                                                    addMouseOver(tradeRowContainers[n].getElementsByClassName("sideValueBox")[0], iconMouseOverText['tradelistvaluesequal'])
-                                                }
-                                                if (gain > 0) {
-                                                    let bar = tradeRowContainer.getElementsByClassName("glowBar")
-                                                    $(bar).css("-webkit-box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
-                                                    $(bar).css("-webkit-box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
-                                                    $(bar).css("-moz-box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
-                                                    $(bar).css("box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
-                                                    $(bar).css("background-color", "rgb(122 255 88)");
-                                                    addMouseOver(tradeRowContainers[n].getElementsByClassName("sideValueBox")[0], iconMouseOverText['tradelistvalueswin'])
-
-                                                }
-                                                if (gain < 0) {
-                                                    let bar = tradeRowContainer.getElementsByClassName("glowBar")
-                                                    $(bar).css("-webkit-box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
-                                                    $(bar).css("-webkit-box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
-                                                    $(bar).css("-moz-box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
-                                                    $(bar).css("box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
-                                                    $(bar).css("background-color", "rgb(255 60 60) ");
-                                                    addMouseOver(tradeRowContainers[n].getElementsByClassName("sideValueBox")[0], iconMouseOverText['tradelistvaluesloss'])
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        if (gain > 0) {
+                            let bar = tradeRowContainer.getElementsByClassName("glowBar")[0]
+                            setStyle(bar, { '-webkit-box-shadow': 'rgb(46 255 53) 0px 0px 10px 1px', '-moz-box-shadow': 'rgb(46 255 53) 0px 0px 10px 1px', 'box-shadow': 'rgb(46 255 53) 0px 0px 10px 1px', 'background-color': 'rgb(122 255 88)' });
+                            /*
+                            $(bar).css("-webkit-box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
+                            $(bar).css("-moz-box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
+                            $(bar).css("box-shadow", "rgb(46 255 53) 0px 0px 10px 1px");
+                            $(bar).css("background-color", "rgb(122 255 88)");
+                            */
+                            addMouseOver(tradeListValueBox, iconMouseOverText['tradelistvalueswin'])
+                        }
+                        if (gain < 0) {
+                            let bar = tradeRowContainer.getElementsByClassName("glowBar")[0]
+                            setStyle(bar, { '-webkit-box-shadow': 'rgb(255 0 0) 0px 0px 10px 1px', '-moz-box-shadow': 'rgb(255 0 0) 0px 0px 10px 1px', 'box-shadow': 'rgb(255 0 0) 0px 0px 10px 1px', 'background-color': 'rgb(255 60 60)' });
+                            /*
+                            $(bar).css("-webkit-box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
+                            $(bar).css("-moz-box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
+                            $(bar).css("box-shadow", "rgb(255 0 0) 0px 0px 10px 1px");
+                            $(bar).css("background-color", "rgb(255 60 60) ");
+                            */
+                            addMouseOver(tradeListValueBox, iconMouseOverText['tradelistvaluesloss'])
                         }
                     }
                 }
             }
         }
-    }
-    setTimeout(function() {
-        canSideValues = true
-    }, 100)
+    })
 }
 
+async function loadTrades() {
+    loadingTrades = true;
+    const trades = await fetchTrades(tradesType);
+    if (trades !== null) {
+        const tradeRowContainers = document.getElementsByClassName("trade-row-container");
+        for (let n = 0; n < trades.length; n++) { //load more trades
+            let tradeRowContainer = tradeRowContainers[loadedTradeCount + n];
+            if (typeof (tradeRowContainer) == "object") {
+                tradeRowContainer.setAttribute("itvtradeid", trades[n].id);
+            }
+        }
+
+        function findOffsetToId(tradeRowContainerIndex) { //tradeRowContainer is the first tradeRowContainer without itvtrade id attribute
+            let x = 0
+            for (let n = tradeRowContainerIndex; n < tradeRowContainers.length; n++) {
+                let thisTradeRowContainer = tradeRowContainers[n]
+                if (thisTradeRowContainer.hasAttribute('itvtradeid')) {
+                    return [x, Number(thisTradeRowContainer.getAttribute('itvtradeid'))]
+                }
+                x++
+            }
+        }
+
+        function findIndexOfIdInData(allTrades, id) {
+            if (allTrades) {
+                for (let n = 0; n < allTrades.length; n++) {
+                    const trade = allTrades[n]
+                    if (trade.id === id) {
+                        return n
+                    }
+                }
+            } else {
+                return null
+            }
+        }
+        if (tradeRowContainers[loadedTradeCount - tradesDeclinedSinceLastLoad] && !tradeRowContainers[loadedTradeCount - tradesDeclinedSinceLastLoad].hasAttribute('itvtradeid')) { //if the trade before newly loaded has not been loaded, if this is true then the tradeRowContainer at index loadedTradeCount - 1 is the first without itvtradeid attribute
+            for (let n = loadedTradeCount - tradesDeclinedSinceLastLoad; n < tradeRowContainers.length; n++) { //loop through all trades starting at the one that could be unloaded because of decline offset
+                const tradeRowContainer = tradeRowContainers[n]
+                if (tradeRowContainer.hasAttribute('itvtradeid')) {
+                    break;
+                }
+                const findOffsetToIdResult = findOffsetToId(n)
+                const offset = findOffsetToIdResult[0]
+                const id = findOffsetToIdResult[1]
+                const allTrades = await getFromStorageLocal("allTrades")
+                const indexOfOffsetIdInData = findIndexOfIdInData(allTrades, id)
+                const tradeData = allTrades[indexOfOffsetIdInData - offset]
+                tradeRowContainer.setAttribute("itvtradeid", tradeData.id);
+            }
+        }
+        loadedTradeCount += trades.length;
+        tradesDeclinedSinceLastLoad = 0
+        addTradeListValues(tradeRowContainers)
+
+        loadingTrades = false;
+        sideValues()
+    } else {
+        setTimeout(() => {
+            loadingTrades = false;
+            sideValues()
+        }, 10000)
+    }
+}
+
+async function sideValues() {
+    let sendmode = false
+    let newdetectors = Array.from(document.getElementsByClassName("paired-name ng-binding"))
+    if (newdetectors.length == 3) {
+        sendmode = true //detects whether we are in counter / send trade mode, or not
+    }
+    if (await getFromStorageLocal("Trade List Values") === true && sendmode === false && isInbound()) {
+        if ((document.getElementsByClassName("trade-row-container").length > loadedTradeCount) && loadingTrades === false) { //check if more trades have been added to DOM since last loadTrades()
+            loadTrades(); //try to attach more itvtradeids
+        }
+        const tradeRowContainers = document.getElementsByClassName("trade-row-container");
+        addTradeListValues(tradeRowContainers); //try to add trade list HTML using new itvtradeids
+    }
+}
 
 
 //adds values to page( previous values should be wiped beforehand )
@@ -1128,15 +1210,6 @@ var serialsPrevious = [];
 async function handleHiding(type) {
     let current_usernames = Array.from(document.querySelectorAll('.paired-name:not(.ng-hide)'))
     let current_username = null
-
-    if (type == undefined) {
-        if (await getFromStorageLocal("Hide Usernames") == true) {
-            currentUsernamesPrevious = [];
-        }
-        if (await getFromStorageLocal("Hide Serials") == true) {
-            serialsPrevious = [];
-        }
-    }
     if (type == "Hide Serials") {
         if (await getFromStorageLocal("Hide Serials") == true) {
             serialsPrevious = [];
@@ -1152,28 +1225,24 @@ async function handleHiding(type) {
             datePrevious = null;
         }
     }
-    current_usernames.forEach(async function(element, i) {
-
+    current_usernames.forEach(async function (element, i) {
         if (await getFromStorageLocal("Hide Usernames") == true) {
             if (element.innerHTML.indexOf("__") == -1) {
+                currentUsernamesPrevious = [];
                 currentUsernamesPrevious.push(element.innerHTML);
+                let current_username_elements = element.getElementsByTagName("span");
 
-                let current_username_elements = element.getElementsByTagName("span")
-
-                current_username_element = current_username_elements[0]
-                current_username = current_username_element.innerHTML
-
-                current_username_element.innerHTML = "_".repeat(current_username.length)
-
-                current_username_element = current_username_elements[2]
-                current_username = current_username_element.innerHTML
-
-                current_username_element.innerHTML = "_".repeat(current_username.length)
+                current_username_element = current_username_elements[0];
+                current_username = current_username_element.innerHTML;
+                current_username_element.innerHTML = "_".repeat(current_username.length);
+                current_username_element = current_username_elements[2];
+                current_username = current_username_element.innerHTML;
+                current_username_element.innerHTML = "_".repeat(current_username.length);
 
             }
         } else {
             if (element.innerHTML.indexOf("__") != -1) {
-                element.innerHTML = currentUsernamesPrevious[i]
+                element.innerHTML = currentUsernamesPrevious[i];
             }
         }
     })
@@ -1181,21 +1250,18 @@ async function handleHiding(type) {
 
     let dataTrade = document.querySelector('[ng-if="data.trade"]');
     if (dataTrade != null) {
-        let element = dataTrade.querySelector('[ng-show="data.trade.isActive"]')
+        let element = dataTrade.querySelector('[ng-show="data.trade.isActive"]');
         if (element != null) {
             if (!element.classList.contains('ng-hide')) {
-
                 if (await getFromStorageLocal("Hide Dates") == true) {
                     if (element.innerHTML.indexOf("_") == -1) {
-                        datePrevious = element.innerHTML
-                        current_date = element.innerHTML.split(" ")[3]
-                        element.innerHTML = " Expires on " + "_".repeat(current_date.length)
+                        datePrevious = element.innerHTML;
+                        current_date = element.innerHTML.split(" ")[3];
+                        element.innerHTML = " Expires on " + "_".repeat(current_date.length);
                     }
                 } else {
-
                     if (element.innerHTML.indexOf("_") != -1) {
-                        console.log(datePrevious)
-                        element.innerHTML = datePrevious
+                        element.innerHTML = datePrevious;
                     }
                 }
             }
@@ -1203,42 +1269,28 @@ async function handleHiding(type) {
         }
     }
 
-
-
-
     serials = []
-
-    serialElements = document.getElementsByClassName("font-caption-header text-subheader limited-number ng-binding")
-
+    serialElements = document.getElementsByClassName("font-caption-header text-subheader limited-number ng-binding");
     for (i = 0; i < serialElements.length; i++) {
-
-
         if (await getFromStorageLocal("Hide Serials") == true) {
-            serialsPrevious.push(serialElements[i].innerHTML)
+            serialsPrevious.push(serialElements[i].innerHTML);
             if (serialElements[i].innerHTML.indexOf("_") == -1) {
 
                 if (serialElements[i].innerHTML != "") {
-                    serials.push(serialElements[i].innerHTML)
+                    serials.push(serialElements[i].innerHTML);
 
-                    serialElements[i].innerHTML = "_".repeat(String(serialElements[i].innerHTML).length)
+                    serialElements[i].innerHTML = "_".repeat(String(serialElements[i].innerHTML).length);
                 }
             }
         } else {
             if (serialElements[i] != undefined) {
                 if (serialElements[i].innerHTML.indexOf("_") != -1) {
-                    serialElements[i].innerHTML = serialsPrevious[i]
+                    serialElements[i].innerHTML = serialsPrevious[i];
                 }
             }
         }
     }
 }
-
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.command == "refreshHide") {
-        sendResponse();
-        handleHiding(request.type)
-    }
-})
 
 var intervalPadding = null;
 async function update_func(response_data) {
@@ -1255,6 +1307,12 @@ async function update_func(response_data) {
     }
 
     handleHiding()
+
+    //create automation widget
+    let name = "Automation Widget"
+    if (await getFromStorageLocal(name) == true) {
+        setUpGUI()
+    }
 
     var data = response_data
     if (data != undefined) {
@@ -1343,23 +1401,6 @@ async function update_func(response_data) {
         var send_total_rap2 = 0
 
         let itemRapChart = await getFromStorageLocal("Item RAP Chart")
-        //set the values of the individual items
-
-        /*
-        if (intervalPadding != null) {
-            clearInterval(intervalPadding)
-        }
-        intervalPadding = setInterval(function() {
-            for (let i = 0; i < names.length; i++) {
-                if (names[i].parentElement.parentElement.parentElement != null) {
-
-
-                }
-            }
-
-        }, 500);
-        it doesn't appear we need the interval anymore
-        */
 
         for (let i = 0; i < names.length; i++) {
             let marginElement = names[i].parentElement.parentElement.parentElement.parentElement.parentElement.parentElement
@@ -1427,12 +1468,8 @@ async function update_func(response_data) {
 
                             }
                             RAP = parseInt(string.replace(/,/g, ""))
-
                             let projected = item[7]
-
                             let isValued = item[3]
-
-
 
                             if (isValued == -1) {
                                 isValued = false
@@ -1440,14 +1477,9 @@ async function update_func(response_data) {
                                 isValued = true
                             }
 
-
-
-
-
                             let minRAP = null
                             let nextMinRAP = null
                             let index = 0
-
 
                             for (num = 0; num < Object.values(window.brackets).length; num++) {
                                 let key = Object.keys(window.brackets)[num]
@@ -1464,11 +1496,7 @@ async function update_func(response_data) {
                                     } else {
                                         nextMinRAP = 99999999999999999
                                     }
-
-
                                 }
-
-
                             }
 
                             let aboveRap = false
@@ -1489,7 +1517,8 @@ async function update_func(response_data) {
                                     }
                                 }
                             }
-                            await (async function(i, cost) {
+
+                            await (async function (i, cost) {
                                 if (names[i].className != "text-lead item-name") { //is not counter small item
                                     //Set up flag box
                                     let itemCardThumbContainer = names[i].parentElement.parentElement.parentElement.parentElement.getElementsByClassName("item-card-thumb-container")[0]
@@ -1537,21 +1566,35 @@ async function update_func(response_data) {
                                 async function getCurrentPlayerIdAndName() {
                                     return new Promise((resolve, reject) => {
                                         let buttons = Array.from(document.getElementsByClassName("btn-control-md ng-binding"))
-                                        buttons.forEach(function(object, index) {
+                                        buttons.forEach(function (object, index) {
                                             if (object.innerHTML == "Counter") {
                                                 current_usernames = Array.from(document.getElementsByClassName("paired-name ng-binding"))
-                                                current_usernames.forEach(function(element) {
+                                                current_usernames.forEach(function (element) {
                                                     if (element.innerHTML.indexOf("Trade with ") != -1) {
                                                         let current_username_element = element.getElementsByTagName("span")
                                                         if (current_username_element.length == 3) {
                                                             current_username_element = current_username_element[2]
 
                                                             var current_username = current_username_element.innerHTML
+                                                            if (current_username.indexOf("__") !== -1 && currentUsernamesPrevious[0] != undefined) {
+                                                                function getUsernameFromHTML(html) {
+                                                                    var mySubString = html.substring(
+                                                                        0,
+                                                                        html.lastIndexOf("<")
+                                                                    );
+                                                                    mySubString = mySubString.substring(
+                                                                        mySubString.lastIndexOf(">") + 1,
+                                                                        mySubString.length
+                                                                    );
+                                                                    return mySubString
+                                                                }
+                                                                current_username = getUsernameFromHTML(currentUsernamesPrevious[0])
+                                                            }
                                                             var xhttp = new XMLHttpRequest();
                                                             xhttp.open("GET", "https://api.roblox.com/users/get-by-username?username=" + current_username);
                                                             xhttp.withCredentials = true;
                                                             xhttp.send();
-                                                            xhttp.onreadystatechange = async function() {
+                                                            xhttp.onreadystatechange = async function () {
                                                                 if (xhttp.readyState == 4) {
                                                                     let id = JSON.parse(xhttp.responseText).Id
                                                                     resolve([id, current_username])
@@ -1564,6 +1607,34 @@ async function update_func(response_data) {
                                         })
                                     })
                                 }
+
+                                //Create Send new trade button
+
+                                if (document.getElementsByClassName('sendButton')[0] == null && await getFromStorageLocal("Send Trade Button") == true && isInbound()) {
+                                    const buttonHTML = `<button type="button" class="btn-control-md ng-binding sendButton">Send</button>`;
+                                    let tradeButtons = document.getElementsByClassName('trade-buttons')[0];
+                                    if (tradeButtons != null) {
+                                        tradeButtons.style.padding = "5px";
+                                        $(buttonHTML).insertAfter(tradeButtons.querySelector('[ng-click="counterTrade(data.trade)"]'));
+                                        //tradeButtons.innerHTML += buttonHTML;
+                                        let sendButton = tradeButtons.getElementsByClassName('sendButton')[0];
+                                        sendButton.onclick = function () {
+                                            (async () => {
+                                                let userData = await getCurrentPlayerIdAndName();
+                                                let userId = userData[0];
+                                                let userName = userData[1];
+                                                if (await getFromStorageLocal("Send Trade Button - Open in new tab") == true) {
+                                                    window.open(`https://www.roblox.com/users/${userId}/trade`, '_blank');
+                                                } else {
+                                                    window.location.href = `https://www.roblox.com/users/${userId}/trade`;
+                                                }
+                                            })();
+                                        }
+                                    }
+                                }
+
+
+
                                 async function addQuickLinks() {
 
                                     //if (await getFromStorageLocal("Quick Links") == true) {
@@ -1586,124 +1657,123 @@ async function update_func(response_data) {
                                         if (tradesHeaderNoWrap == null) {
                                             tradesHeaderNoWrap = document.getElementsByClassName("trades-header-nowrap")[0]
                                         }
-                                        if (tradesHeaderNoWrap.getElementsByClassName("profileQuickLinkBox")[0] == null) {
-                                            let profileQuickLinkBox = document.createElement("div")
-                                            profileQuickLinkBox.style.backgroundColor = "rgba(0,0,0,0.1)"
-                                            profileQuickLinkBox.style.borderRadius = "8px"
-                                            profileQuickLinkBox.style.position = "absolute"
-                                            profileQuickLinkBox.style.marginTop = "5px"
-                                            profileQuickLinkBox.style.marginLeft = "10px"
-                                            profileQuickLinkBox.style.display = "inline-block"
-                                            let overflowing = isOverflown(tradesHeaderNoWrap)
-                                            if (overflowing == true) {
-                                                profileQuickLinkBox.style.right = "-80px"
-                                            } else {
-                                                profileQuickLinkBox.style.right = null
-                                            }
-                                            profileQuickLinkBox.className = "profileQuickLinkBox"
-                                            tradesHeaderNoWrap.appendChild(profileQuickLinkBox);
-                                        } else {
-                                            let profileQuickLinkBox = document.getElementsByClassName("profileQuickLinkBox")[0]
-                                            let overflowing = isOverflown(tradesHeaderNoWrap)
-                                            if (overflowing == true) {
-                                                profileQuickLinkBox.style.right = "-80px"
-                                            } else {
-                                                profileQuickLinkBox.style.right = null
-                                            }
-                                            profileQuickLinkBox.className = "profileQuickLinkBox"
-                                            tradesHeaderNoWrap.appendChild(profileQuickLinkBox);
-                                        }
-                                        let profileQuickLinkBox = tradesHeaderNoWrap.getElementsByClassName("profileQuickLinkBox")[0]
 
-                                        async function addQuickLink(iconName, url, mouseOverText) {
-                                            if (quickLinkBox.getElementsByClassName(iconName + "_link").length == 0) {
+                                        if (tradesHeaderNoWrap != null) {
+                                            if (tradesHeaderNoWrap.getElementsByClassName("profileQuickLinkBox")[0] == null) {
+                                                let profileQuickLinkBox = document.createElement("div")
+                                                profileQuickLinkBox.style.backgroundColor = "rgba(0,0,0,0.1)"
+                                                profileQuickLinkBox.style.borderRadius = "8px"
+                                                profileQuickLinkBox.style.position = "absolute"
+                                                profileQuickLinkBox.style.marginTop = "5px"
+                                                profileQuickLinkBox.style.marginLeft = "10px"
+                                                profileQuickLinkBox.style.display = "inline-block"
+                                                let overflowing = isOverflown(tradesHeaderNoWrap)
+                                                if (overflowing == true) {
+                                                    profileQuickLinkBox.style.right = "-80px"
+                                                } else {
+                                                    profileQuickLinkBox.style.right = null
+                                                }
+                                                profileQuickLinkBox.className = "profileQuickLinkBox"
+                                                tradesHeaderNoWrap.appendChild(profileQuickLinkBox);
+                                            } else {
+                                                let profileQuickLinkBox = document.getElementsByClassName("profileQuickLinkBox")[0]
+                                                let overflowing = isOverflown(tradesHeaderNoWrap)
+                                                if (overflowing == true) {
+                                                    profileQuickLinkBox.style.right = "-80px"
+                                                } else {
+                                                    profileQuickLinkBox.style.right = null
+                                                }
+                                                profileQuickLinkBox.className = "profileQuickLinkBox"
+                                                tradesHeaderNoWrap.appendChild(profileQuickLinkBox);
+                                            }
+                                            let profileQuickLinkBox = tradesHeaderNoWrap.getElementsByClassName("profileQuickLinkBox")[0]
+
+                                            async function addQuickLink(iconName, url, mouseOverText) {
+                                                if (quickLinkBox.getElementsByClassName(iconName + "_link").length == 0) {
+                                                    var img = document.createElement("img");
+                                                    img.src = icons[iconName]
+                                                    img.style.padding = "3px"
+                                                    img.style.height = "28px"
+                                                    img.style.width = "28px"
+
+                                                    let a = document.createElement("a");
+
+                                                    a.style.zIndex = 1000
+                                                    a.target = "_blank"
+                                                    a.className = iconName + "_link"
+                                                    a.style.height = "28px"
+                                                    a.style.width = "28px"
+                                                    a.href = url
+                                                    a.style.display = "inline-block"
+
+                                                    quickLinkBox.appendChild(a);
+                                                    a.appendChild(img)
+                                                    addMouseOver(a, mouseOverText)
+                                                    if (quickLinkBox.childElementCount < 5) {
+                                                        quickLinkBox.style.maxWidth = String(29 * quickLinkBox.childElementCount) + "px"
+                                                    } else {
+                                                        quickLinkBox.style.maxWidth = String(29 * 4) + "px"
+                                                    }
+                                                }
+                                            }
+
+                                            async function addProfileQuickLink(iconName, url, mouseOverText) {
+                                                if (profileQuickLinkBox.getElementsByClassName(iconName + "_link").length != 0) {
+                                                    if (profileQuickLinkBox.getElementsByClassName(iconName + "_link")[0].href != url && url.indexOf('undefined') === -1) {
+                                                        profileQuickLinkBox.getElementsByClassName(iconName + "_link")[0].remove()
+                                                    } else {
+                                                        return
+                                                    }
+                                                }
                                                 var img = document.createElement("img");
                                                 img.src = icons[iconName]
-                                                img.style.padding = "3px"
-                                                img.style.height = "28px"
-                                                img.style.width = "28px"
+                                                img.style.padding = "4px"
+                                                img.style.height = "38px"
+                                                img.style.width = "38px"
 
                                                 let a = document.createElement("a");
 
                                                 a.style.zIndex = 1000
                                                 a.target = "_blank"
                                                 a.className = iconName + "_link"
-                                                a.style.height = "28px"
-                                                a.style.width = "28px"
+                                                a.style.height = "38px"
+                                                a.style.width = "38px"
                                                 a.href = url
                                                 a.style.display = "inline-block"
 
-                                                quickLinkBox.appendChild(a);
+                                                profileQuickLinkBox.appendChild(a);
                                                 a.appendChild(img)
                                                 addMouseOver(a, mouseOverText)
-                                                if (quickLinkBox.childElementCount < 5) {
-                                                    quickLinkBox.style.maxWidth = String(29 * quickLinkBox.childElementCount) + "px"
-                                                } else {
-                                                    quickLinkBox.style.maxWidth = String(29 * 4) + "px"
-                                                }
-
                                             }
-
-                                        }
-
-                                        async function addProfileQuickLink(iconName, url, mouseOverText) {
-                                            if (profileQuickLinkBox.getElementsByClassName(iconName + "_link").length != 0) {
-                                                if (profileQuickLinkBox.getElementsByClassName(iconName + "_link")[0].href != url) {
-                                                    profileQuickLinkBox.getElementsByClassName(iconName + "_link")[0].remove()
-                                                } else {
-                                                    return
-                                                }
+                                            let url = null
+                                            if (await getFromStorageLocal("rolimons.com General Item Link") == true) {
+                                                url = "https://www.rolimons.com/item/" + String(id)
+                                                addQuickLink("rolimons", url, "A Quick Link to this item's general page on rolimons.com")
                                             }
-                                            var img = document.createElement("img");
-                                            img.src = icons[iconName]
-                                            img.style.padding = "4px"
-                                            img.style.height = "38px"
-                                            img.style.width = "38px"
-
-                                            let a = document.createElement("a");
-
-                                            a.style.zIndex = 1000
-                                            a.target = "_blank"
-                                            a.className = iconName + "_link"
-                                            a.style.height = "38px"
-                                            a.style.width = "38px"
-                                            a.href = url
-                                            a.style.display = "inline-block"
-
-                                            profileQuickLinkBox.appendChild(a);
-                                            a.appendChild(img)
-                                            addMouseOver(a, mouseOverText)
+                                            if (await getFromStorageLocal("rolimons.com UAID specific Item Link") == true) {
+                                                url = "https://www.rolimons.com/uaid/" + String(uaid)
+                                                addQuickLink("rolimons-specific", url, "A Quick Link to this item's UAID specific page on rolimons.com")
+                                            }
+                                            if (await getFromStorageLocal("rblx.trade General Item Link") == true) {
+                                                url = "https://rblx.trade/i/" + String(id)
+                                                addQuickLink("rblx.trade", url, "A Quick Link to this item's general page on rblx.trade")
+                                            }
+                                            if (await getFromStorageLocal("rblx.trade UAID Specific Item Link") == true) {
+                                                url = "https://rblx.trade/uaid/" + String(uaid)
+                                                addQuickLink("rblx.trade-specific", url, "A Quick Link to this item's UAID specific page on rblx.trade")
+                                            }
+                                            let userData = await getCurrentPlayerIdAndName()
+                                            let userId = userData[0]
+                                            let userName = userData[1]
+                                            if (await getFromStorageLocal("rolimons.com User Link") == true) {
+                                                let url = "https://www.rolimons.com/player/" + String(userId)
+                                                addProfileQuickLink("rolimons", url, "A Quick Link to this user's profile on rolimons.com")
+                                            }
+                                            if (await getFromStorageLocal("rblx.trade User Link") == true) {
+                                                let url = "https://rblx.trade/u/" + String(userName)
+                                                addProfileQuickLink("rblx.trade", url, "A Quick Link to this user's profile on rblx.trade")
+                                            }
                                         }
-                                        let url = null
-                                        if (await getFromStorageLocal("rolimons.com General Item Link") == true) {
-                                            url = "https://www.rolimons.com/item/" + String(id)
-                                            addQuickLink("rolimons", url, "A Quick Link to this item's general page on rolimons.com")
-                                        }
-                                        if (await getFromStorageLocal("rolimons.com UAID specific Item Link") == true) {
-                                            url = "https://www.rolimons.com/uaid/" + String(uaid)
-                                            addQuickLink("rolimons-specific", url, "A Quick Link to this item's UAID specific page on rolimons.com")
-                                        }
-                                        if (await getFromStorageLocal("rblx.trade General Item Link") == true) {
-                                            url = "https://rblx.trade/i/" + String(id)
-                                            addQuickLink("rblx.trade", url, "A Quick Link to this item's general page on rblx.trade")
-                                        }
-                                        if (await getFromStorageLocal("rblx.trade UAID Specific Item Link") == true) {
-                                            url = "https://rblx.trade/uaid/" + String(uaid)
-                                            addQuickLink("rblx.trade-specific", url, "A Quick Link to this item's UAID specific page on rblx.trade")
-                                        }
-                                        let userData = await getCurrentPlayerIdAndName()
-
-                                        let userId = userData[0]
-                                        let userName = userData[1]
-                                        if (await getFromStorageLocal("rolimons.com User Link") == true) {
-                                            let url = "https://www.rolimons.com/player/" + String(userId)
-                                            addProfileQuickLink("rolimons", url, "A Quick Link to this user's profile on rolimons.com")
-                                        }
-                                        if (await getFromStorageLocal("rblx.trade User Link") == true) {
-                                            let url = "https://rblx.trade/u/" + String(userName)
-                                            addProfileQuickLink("rblx.trade", url, "A Quick Link to this user's profile on rblx.trade")
-                                        }
-
                                     }
                                 }
                                 addQuickLinks()
@@ -1736,7 +1806,7 @@ async function update_func(response_data) {
                                     addMouseOver(img, "Open RAP chart popup")
 
                                     let thisid = id
-                                    img.addEventListener("click", function() {
+                                    img.addEventListener("click", function () {
                                         chart(thisid)
                                     })
 
@@ -1869,12 +1939,8 @@ async function update_func(response_data) {
                         }
 
                     }
-
-
                 }
-
             }
-
         };
 
         //clear last item from false projection glitch
@@ -1882,9 +1948,6 @@ async function update_func(response_data) {
             let i = names.length - 1 - sendnames.length
 
             if (names[i].parentElement.parentElement.parentElement != null) {
-
-
-
 
                 if (names[i].className == "text-lead item-name") { //if element is counter added item element
                     var element = names[i].getElementsByClassName("ng-binding")[0]
@@ -1899,7 +1962,6 @@ async function update_func(response_data) {
                 id = id.join("");
                 let item = item_data[id]
                 let projected = item[7]
-
 
                 if (projected == -1 && box != undefined) {
 
@@ -1936,7 +1998,6 @@ async function update_func(response_data) {
 
                 if (total1.innerHTML.indexOf("<br>") == -1) {
                     total1.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + String(total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, ""))).commafy() + "<br/>")
-                    //console.log(total1.innerHTML)
                     var img = document.createElement("img");
                     if (valueProvider == "rolimons.com") {
                         img.src = icons["rolimons"]
@@ -1944,7 +2005,6 @@ async function update_func(response_data) {
                     if (valueProvider == "rblx.trade") {
                         img.src = icons["rblx.trade"]
                     }
-
 
                     img.style.position = 'absolute'
                     img.style.height = '20px'
@@ -1968,29 +2028,20 @@ async function update_func(response_data) {
                     img.style.width = '20px'
                     img.style.marginTop = "-22px";
                     total2.appendChild(img);
-
-
-
                 }
 
             } else { //if we are in counter or send trade mode
-
-
                 if (total_value1 == 0) { //recount
                     let newparent1 = document.getElementsByClassName("trade-request-window-offer")[0]
 
                     let newsendnames = Array.from(document.getElementsByClassName("text-lead item-name"));
 
                     for (let i = 0; i < newsendnames.length; i++) {
-                        //console.log(i)
                         var cost = newsendnames[i].parentElement.parentElement.parentElement.getElementsByClassName("text-overflow item-card-price")[0]
 
                         if (cost == null) {
                             cost = newsendnames[i].parentElement.parentElement.getElementsByClassName("item-value ng-scope")[0]
                         }
-
-
-
 
                         if (newsendnames[i].className == "text-lead item-name") { //if element is counter added item element
                             var element = newsendnames[i].getElementsByClassName("ng-binding")[0]
@@ -2023,15 +2074,11 @@ async function update_func(response_data) {
                     let newsendnames = Array.from(document.getElementsByClassName("text-lead item-name"));
 
                     for (let i = 0; i < newsendnames.length; i++) {
-                        //console.log(i)
                         var cost = newsendnames[i].parentElement.parentElement.parentElement.getElementsByClassName("text-overflow item-card-price")[0]
 
                         if (cost == null) {
                             cost = newsendnames[i].parentElement.parentElement.getElementsByClassName("item-value ng-scope")[0]
                         }
-
-
-
 
                         if (newsendnames[i].className == "text-lead item-name") { //if element is counter added item element
                             var element = newsendnames[i].getElementsByClassName("ng-binding")[0]
@@ -2052,9 +2099,7 @@ async function update_func(response_data) {
                         }
                         if (isDescendant(newparent2, cost) == true) {
                             total_value2 += Number(value)
-
                         }
-
                     }
                 }
 
@@ -2063,9 +2108,7 @@ async function update_func(response_data) {
                     if (total1.innerHTML.indexOf("<") == -1) {
                         total1.parentElement.style.height = '300%'
                         total2.parentElement.style.height = '300%'
-
                         total1.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + String(total_value1 + parseInt(sendrobuxadded1.innerHTML.replace(/,/g, ""))).commafy() + "<br/>")
-
 
                         var img = document.createElement("img");
                         if (valueProvider == "rolimons.com") {
@@ -2074,7 +2117,6 @@ async function update_func(response_data) {
                         if (valueProvider == "rblx.trade") {
                             img.src = icons["rblx.trade"]
                         }
-
 
                         img.style.position = 'absolute'
                         img.style.height = '20px'
@@ -2092,7 +2134,6 @@ async function update_func(response_data) {
                         if (valueProvider == "rblx.trade") {
                             img.src = icons["rblx.trade"]
                         }
-
                         img.style.position = 'absolute'
                         img.style.height = '20px'
                         img.style.width = '20px'
@@ -2105,9 +2146,7 @@ async function update_func(response_data) {
                     if (total1.innerHTML.indexOf("<") == -1) {
                         total1.parentElement.style.height = '300%'
                         total2.parentElement.style.height = '300%'
-
                         total1.innerHTML = "0" + ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + String(total_value1 + parseInt(sendrobuxadded1.innerHTML.replace(/,/g, ""))).commafy() + "<br/>")
-
 
                         var img = document.createElement("img");
                         if (valueProvider == "rolimons.com") {
@@ -2149,8 +2188,6 @@ async function update_func(response_data) {
             };
         }
         if (sendmode == false) {
-
-
             if (await getFromStorageLocal("Total Win/Loss") == true) {
                 let tradebuttons = document.getElementsByClassName("trade-buttons")[0]
                 tradebuttons.querySelectorAll('.totalWin').forEach(e => e.remove());
@@ -2196,13 +2233,11 @@ async function update_func(response_data) {
 
 //must be used if in counter/send trade mode and dealing with item adding elements
 function update(request_response) {
-
     var costs = document.getElementsByClassName("text-robux ng-binding");
     var names = Array.from(document.getElementsByClassName("item-card-name ng-binding"));
     var sendnames = Array.from(document.getElementsByClassName("text-lead item-name"));
     var sendrobuxadded1 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[0]
     var sendrobuxadded2 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[1]
-
 
     //remove values
     for (i = 0; i < names.length; i++) {
@@ -2321,7 +2356,17 @@ function update(request_response) {
     };
 
 };
-chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) { //listens for requests from background page
+chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) { //listens for requests from background page
+    if (request.command == "refreshHide") {
+        sendResponse();
+        handleHiding(request.type)
+    }
+
+    if (request.command == "tradeAdded") {
+        sendResponse();
+        sideValues()
+    }
+
     if (request.type == 'test') { //test to see if already injected
         sendResponse(true);
         throw "Already started ITV, continuing..."
@@ -2409,11 +2454,6 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
         }
         if (document.URL.indexOf("/trades") != -1) {
 
-            let name = "Automation Widget"
-            if (await getFromStorageLocal(name) == true) {
-                setUpGUI()
-            }
-
             let changables = Array.from(document.getElementsByClassName("item-cards-stackable"))
 
             for (var i = 0; i < changables.length; i++) {
@@ -2434,10 +2474,10 @@ chrome.runtime.onMessage.addListener(async function(request, sender, sendRespons
             }
 
             let header = document.getElementsByClassName("trades-header")[0]
-            if (header != undefined && document.getElementById("valueProvider") == undefined) {
+            if (header != undefined && document.getElementById("valueProvider") == undefined && await getFromStorageLocal('Current Value Provider Display') == true) {
                 var h = document.createElement("h3");
                 h.id = "valueProvider"
-                var t = `<img src="${icons["primary-with-arrow"]}" style="height: 25px; width: 25px;margin-top:-3px;margin-right:5px;">ITV Cracked by Shawn#2000 \n Current Value Provider: ${"&nbsp".repeat(4) + request_response[2]}`
+                var t = `<img src="${icons["primary-with-arrow"]}" style="height: 25px; width: 25px;margin-top:-3px;margin-right:5px;">Cracked by Shawn#2000                                                         Current Value Provider: ${request_response[2]}`
                 h.innerHTML = t
                 header.getElementsByTagName("h1")[0].parentElement.insertBefore(h, header.getElementsByTagName("h1")[0].nextSibling);
             }
@@ -2476,11 +2516,7 @@ var debounce = true
 
 
 function nodeRemovedCallback(event) { //page changes handler
-
-
-
     var className = event.relatedNode.className
-
     if (className == "col-xs-12") {
         //remove Total Win/Loss
         totalWin = document.getElementsByClassName("totalWin")[0]
@@ -2516,10 +2552,10 @@ function nodeInsertedCallback(event) { //page changes handler
     if ((className == "hlist item-cards item-cards-stackable" || className == "trade-request-item ng-scope") && debounce == true) {
         debounce = false
         //viewing new trade, refresh
-        setTimeout(function() {
+        setTimeout(function () {
             debounce = true
         }, 1);
-        setTimeout(function() {
+        setTimeout(function () {
 
             if (className == "hlist item-cards item-cards-stackable" || className == "trade-request-item ng-scope") {
 
@@ -2552,15 +2588,15 @@ document.addEventListener('DOMNodeInserted', nodeInsertedCallback);
 document.addEventListener('DOMNodeRemoved', nodeRemovedCallback);
 
 if (document.readyState != "complete") {
-    document.addEventListener('readystatechange', function(evt) {
+    document.addEventListener('readystatechange', function (evt) {
         if (document.readyState == "complete") {
-            setTimeout(function() {
+            setTimeout(function () {
                 update_func(window.values)
             }, 500)
         }
     })
 } else {
-    setTimeout(function() {
+    setTimeout(function () {
         update_func(window.values)
     }, 500)
 }
@@ -2582,123 +2618,87 @@ function check_trades_for_not_side_values() {
 }
 
 function tabInboundEvent() {
-    updateRecentTradeData()
+    resetLoadTrades()
 }
 async function run() {
-    while (true) {
-        await pause();
-        //decline
-        var declineElements = document.querySelectorAll('[ng-click="declineTrade(data.trade)"]');
+
+    //decline
+    var declineElements = document.querySelectorAll('[ng-click="declineTrade(data.trade)"]');
+    for (var i = 0, len = declineElements.length; i < len; i++) {
+
+        declineElements[i].onclick = function () {
+            let declineButton = document.getElementById("modal-action-button")
+            declineButton.onclick = function () {
+                tradeDeclined()
+            }
+        }
+    }
+    //accept
+    declineElements = document.querySelectorAll('[ng-click="acceptTrade(data.trade)"]');
+    for (var i = 0, len = declineElements.length; i < len; i++) {
+
+        declineElements[i].onclick = function () {
+            let declineButton = document.getElementById("modal-action-button")
+            declineButton.onclick = function () {
+                tradeDeclined()
+            }
+        }
+    }
+
+    //counter
+    if (document.URL.indexOf("/trades") != -1) {
+        declineElements = document.querySelectorAll('[ng-click="sendTrade()"]');
         for (var i = 0, len = declineElements.length; i < len; i++) {
 
-            declineElements[i].onclick = function() {
+            declineElements[i].onclick = function () {
                 let declineButton = document.getElementById("modal-action-button")
-                declineButton.onclick = function() {
+                declineButton.onclick = function () {
                     tradeDeclined()
-                }
-            }
-        }
-        //accept
-        declineElements = document.querySelectorAll('[ng-click="acceptTrade(data.trade)"]');
-        for (var i = 0, len = declineElements.length; i < len; i++) {
-
-            declineElements[i].onclick = function() {
-                let declineButton = document.getElementById("modal-action-button")
-                declineButton.onclick = function() {
-                    tradeDeclined()
-                }
-            }
-        }
-
-        //counter
-        if (document.URL.indexOf("/trades") != -1) {
-            declineElements = document.querySelectorAll('[ng-click="sendTrade()"]');
-            for (var i = 0, len = declineElements.length; i < len; i++) {
-
-                declineElements[i].onclick = function() {
-                    let declineButton = document.getElementById("modal-action-button")
-                    declineButton.onclick = function() {
-                        tradeDeclined()
-                    }
-                }
-            }
-        }
-
-        let selectedRow = document.getElementsByClassName("trade-row ng-scope selected")[0]
-        if (selectedRow != null) {
-            let tradeIdElement = selectedRow.getElementsByClassName("trade-row-container")[0]
-            if (tradeIdElement != null) {
-                selectedId = tradeIdElement.getAttribute("data-tradeid")
-            }
-        }
-
-        tabInbound = document.getElementById("tab-Inbound")
-        if (tabInbound != null) {
-            tabInbound.onclick = tabInboundEvent
-        }
-
-        let counterButtons = document.getElementsByClassName("text-link cursor-pointer")
-
-        for (var i = 0; i < counterButtons.length; i++) {
-            //if (counterButtons[i].innerHTML == "Back to Trades List"){
-            counterButtons[i].onclick = tabInboundEvent
-            // }
-        }
-
-        var newdetectors = Array.from(document.getElementsByClassName("paired-name ng-binding"))
-        let sendmode = false
-
-        if (newdetectors.length == 3) {
-            sendmode = true //detects whether we are in counter/send trade mode, or not
-        }
-        if (sendmode == false) {
-
-            let tradeRowContainers = document.getElementsByClassName("trade-row-container")
-
-            numTradesLoaded = tradeRowContainers.length
-
-            let dataTrade = document.querySelector('[ng-if="data.trade"]');
-            if (dataTrade != null) {
-                let expiresOn = dataTrade.querySelector('[ng-show="data.trade.isActive"]')
-                if (expiresOn != null) {
-
-                    if (!expiresOn.classList.contains('ng-hide')) {
-
-                        if (check_trades_for_not_side_values() == false) {
-                            sideValues()
-                        }
-
-                    }
-                }
-            }
-        }
-
-        if (sendmode == true) {
-            var sendrobuxadded1 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[0]
-            var sendrobuxadded2 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[1]
-            if (sendrobuxadded1 != undefined && sendrobuxadded2 != undefined) {
-                let A = parseInt(sendrobuxadded1.innerHTML.replace(/,/g, ""))
-                let B = parseInt(sendrobuxadded2.innerHTML.replace(/,/g, ""))
-
-                if (numrobuxadded1 != A || numrobuxadded2 != B) {
-
-                    update(window.values)
-                    numrobuxadded1 = A
-                    numrobuxadded2 = B
                 }
             }
         }
     }
+
+    let selectedRow = document.getElementsByClassName("trade-row ng-scope selected")[0]
+    if (selectedRow != null) {
+        let tradeIdElement = selectedRow.getElementsByClassName("trade-row-container")[0]
+        if (tradeIdElement != null) {
+            selectedId = tradeIdElement.getAttribute("itvtradeid")
+        }
+    }
+
+    tabInbound = document.getElementById("tab-Inbound")
+    if (tabInbound != null) {
+        tabInbound.onclick = tabInboundEvent
+    }
+
+    let counterButtons = document.getElementsByClassName("text-link cursor-pointer")
+    for (var i = 0; i < counterButtons.length; i++) {
+        counterButtons[i].onclick = tabInboundEvent
+    }
+    var newdetectors = Array.from(document.getElementsByClassName("paired-name ng-binding"))
+    let sendmode = false
+    if (newdetectors.length == 3) {
+        sendmode = true //detects whether we are in counter/send trade mode, or not
+    }
+    if (sendmode == false) {
+        sideValues()
+    }
+    if (sendmode == true) {
+        var sendrobuxadded1 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[0]
+        var sendrobuxadded2 = document.getElementsByClassName("text-secondary robux-line-value ng-binding")[1]
+        if (sendrobuxadded1 != undefined && sendrobuxadded2 != undefined) {
+            let A = parseInt(sendrobuxadded1.innerHTML.replace(/,/g, ""))
+            let B = parseInt(sendrobuxadded2.innerHTML.replace(/,/g, ""))
+            if (numrobuxadded1 != A || numrobuxadded2 != B) {
+                update(window.values)
+                numrobuxadded1 = A
+                numrobuxadded2 = B
+            }
+        }
+    }
+    setTimeout(() => {
+        run();
+    }, 1000)
 }
-
-function pause() {
-    return new Promise((resolve, reject) => {
-        setTimeout(function() {
-
-            resolve();
-        }, 200)
-    })
-}
-
-
 run();
