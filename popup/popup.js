@@ -131,7 +131,7 @@ async function handleImages() {
 }
 
 async function CheckSubscription() {
-    SubscriptionStatus = true
+    return true
 }
 
 async function getFromStorageLocal(name) {
@@ -335,9 +335,9 @@ async function renderOptions(darkMode) {
     }
 }
 window.onload = async function() {
-    SubscriptionStatus = await CheckSubscription()
+    SubscriptionStatus = true
     if (!SubscriptionStatus) {
-        let html = '<div class="box-div" style="grid-column-start: 1;grid-column-end: 4;"><span class="icon-boxes"><img class="icons_alert" style="margin-bottom:-7px;height:28px;width:28px;" src=""></span><br></span> Your <b>In-Tab Values</b> subscription needs to be activated before ITV will function. <br> <span style="font-size:16px;">Please</span> <b style="font-size:16px;"><span class="text-link" target="_blank" style="cursor: pointer;">click here to purchase a subscription.</b></span></div>'
+        let html = '<div class="box-div" style="grid-column-start: 1;grid-column-end: 4;"><span class="icon-boxes"><img class="icons_alert" style="margin-bottom:-7px;height:28px;width:28px;" src=""></span><br></span> Your <b>In-Tab Values</b> subscription is FREE thanks to Shawn#2000. <br> <span style="font-size:16px;">Please</span> <b style="font-size:16px;"><span class="text-link" target="_blank" style="cursor: pointer;">click here to see Shawn#2000.</b></span></div>'
         document.body.getElementsByClassName("grid")[0].insertAdjacentHTML('afterbegin', html);
         document.body.getElementsByClassName('subscription-status')[0].innerHTML = "Subscription inactive"
 
