@@ -6,6 +6,7 @@
         "Trade List Values": [1, true, true, "Previews trade values on the trade list using ITV's caching system. This feature currently only works on inbound trades. If the values appear to be inaccurate( often after declining trades using the Automation Widget ), please wait a little while and then refresh the trades list."],
         "Over-RAP data": [1, true, false, "Displays how much an item is over it's RAP( Recent Average Price ) requirement. This feature tells you have likely it is that an item will soon raise in value. Currently this feature only works with the rolimons.com value supplier."],
         "Under-RAP data": [1, true, false, "Displays how much an item is under it's RAP( Recent Average Price ) requirement. This feature tells you have likely it is that an item will soon lower in value. Currently this feature only works with the rolimons.com value supplier."],
+        "Till raise data": [1, true, false, "Displays how much more RAP an item needs to being considered for a value raise by the Rolimons value team. https://www.rolimons.com/raprequirements"],
         "User Profile Value": [1, true, true, "Shows users' total Recent Average Price on their profile page."],
         "User Profile RAP": [1, true, true, "Shows users' total value on their profile page."],
         "Total Win/Loss": [1, true, true, "Shows the current trade's total win amount to the right of the trade decline button."],

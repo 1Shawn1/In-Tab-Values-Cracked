@@ -77,7 +77,7 @@ function saveLocal(name, value) {
 }
 
 async function getFromStorageLocal(name) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         chrome.storage.local.get(name, async function (items) {
             value = items[name]
             if (value == undefined) {
@@ -88,13 +88,13 @@ async function getFromStorageLocal(name) {
                             if (thisKey == name) {
                                 value = globalData[key][thisKey][1]
                                 saveLocal(name, value)
-                                resolve(value)
+                                resolve(value);
                             }
                             for (let thisThisKey in globalData[key][thisKey]) {
                                 if (thisThisKey == name) {
                                     value = globalData[key][thisKey][thisThisKey][1]
-                                    saveLocal(name, value)
-                                    resolve(value)
+                                    saveLocal(name, value);
+                                    resolve(value);
                                 }
                             }
                         }
@@ -103,24 +103,27 @@ async function getFromStorageLocal(name) {
                 if (name == "tradeCache") {
                     saveLocal(name, {})
                 } else if (name == "New") {
-                    saveLocal(true)
+                    saveLocal(name, true)
                 } else if (name == "Decline Value Losses") {
-                    saveLocal(true)
+                    saveLocal(name, true)
                     resolve(true)
                 } else if (name == "Decline Threshold") {
-                    saveLocal(.15)
+                    saveLocal(name, .15)
                     resolve(.15)
                 } else if (name == "Decline Projecteds") {
-                    saveLocal(false)
+                    saveLocal(name, false)
                     resolve(false)
+                } else if (name == "Don't Decline Rares") {
+                    saveLocal(name, true)
+                    resolve(true)
                 } else if (name == "Max Decline Amount") {
-                    saveLocal(0)
+                    saveLocal(name, 0)
                     resolve(0)
                 } else if (name == "Whitelisted Users") {
-                    saveLocal("")
+                    saveLocal(name, "")
                     resolve("")
                 } else if (name == "Max Remove Amount") {
-                    saveLocal(100)
+                    saveLocal(name, 100)
                     resolve(100)
                 }
             }
@@ -486,7 +489,7 @@ async function declineTrade(tradeId) {
 function isInbound() {
     return $(document.querySelector("#trades-container > div > div.ng-scope > div > div > div.col-xs-12.col-sm-8.trades-list-detail > div > div.trade-buttons > button:nth-child(2)")).is(":visible");
 }
-function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, maxDeclineAmount, whitelistedUsers) {
+function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, dontDeclineRares, maxDeclineAmount, whitelistedUsers) {
     const waitTime = 200
     let values = window.values
 
@@ -549,18 +552,23 @@ function cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, ma
                             total1 += value
                         }
                         let isProjected = false
+                        let isRare = false
                         for (let n2 = 0; n2 < theirAssets.length; n2++) {
                             let assetId = theirAssets[n2].assetId
                             let value = item_data[assetId][4]
                             let thisprojected = item_data[assetId][7]
+                            let thisrare = item_data[assetId][9]
                             if (thisprojected == 1) {
                                 isProjected = true
+                            }
+                            if (thisrare == 1) {
+                                isRare = true
                             }
                             total2 += value
                         }
                         if (whitelistedUsers.indexOf(String(data.user.id)) == -1 && whitelistedUsers.indexOf(String(data.user.name)) == -1 && whitelistedUsers.indexOf(String(data.user.displayName)) == -1) {
                             let minimumLossNumber = (total1 + myRobux) * declineThreshold
-                            if (((total1 + myRobux) - minimumLossNumber > (total2 + theirRobux) && declineValueLosses == true) || (declineProjecteds == true && isProjected)) {
+                            if ((((total1 + myRobux) - minimumLossNumber > (total2 + theirRobux) && declineValueLosses == true) || (declineProjecteds == true && isProjected)) && !(dontDeclineRares && isRare)) {
                                 let response = await declineTrade(cachedTrade.id)
                                 if (response) {
                                     console.log("declined trade: " + total1 + " : " + total2)
@@ -845,13 +853,14 @@ async function setUpGUI() {
                         let declineValueLosses = automationWidget.getElementsByClassName("value")[0].checked
                         let declineThreshold = automationWidget.getElementsByClassName("value")[1].value
                         let declineProjecteds = automationWidget.getElementsByClassName("value")[2].checked
-                        let maxDeclineAmount = automationWidget.getElementsByClassName("value")[3].value
-                        let whitelistedUsers = automationWidget.getElementsByClassName("value")[4].value
+                        let dontDeclineRares = automationWidget.getElementsByClassName("value")[3].checked
+                        let maxDeclineAmount = automationWidget.getElementsByClassName("value")[4].value
+                        let whitelistedUsers = automationWidget.getElementsByClassName("value")[5].value
                         whitelistedUsers = whitelistedUsers.split(',');
                         whitelistedUsers.forEach((x, i) => whitelistedUsers[i] = x.replace(/\s+/g, ''));
 
                         if (declineValueLosses || declineProjecteds) {
-                            await cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, maxDeclineAmount, whitelistedUsers)
+                            await cleanTrades(declineValueLosses, declineThreshold, declineProjecteds, dontDeclineRares, maxDeclineAmount, whitelistedUsers)
                         }
                         setTimeout(() => {
                             startDecline.innerHTML = "Start Declining Inbound Trades"
@@ -874,7 +883,7 @@ async function setUpGUI() {
 
                 let startRemoveFollowing = document.getElementById("removeFollowing")
                 startRemoveFollowing.addEventListener("click", async function () {
-                    let maxRemoveAmount = automationWidget.getElementsByClassName("value")[5].value
+                    let maxRemoveAmount = automationWidget.getElementsByClassName("value")[6].value
                     removeFollowing(maxRemoveAmount)
 
                 })
@@ -1480,7 +1489,7 @@ async function update_func(response_data) {
                             let minRAP = null
                             let nextMinRAP = null
                             let index = 0
-
+                            let canRaise = true;
                             for (num = 0; num < Object.values(window.brackets).length; num++) {
                                 let key = Object.keys(window.brackets)[num]
                                 let current_value = Object.values(window.brackets)[num]
@@ -1494,6 +1503,7 @@ async function update_func(response_data) {
                                     if (Object.keys(window.brackets)[num + 1] != null) {
                                         nextMinRAP = Object.keys(window.brackets)[num + 1]
                                     } else {
+                                        canRaise = false;
                                         nextMinRAP = 99999999999999999
                                     }
                                 }
@@ -1502,6 +1512,8 @@ async function update_func(response_data) {
                             let aboveRap = false
                             let belowRap = false
                             let amount = null
+                            let toRaise = nextMinRAP - RAP;
+                            let willRaise = false;
                             if (valueProvider == "rolimons.com") {
                                 if (isValued == true && value >= Object.values(window.brackets)[0]) {
 
@@ -1514,6 +1526,10 @@ async function update_func(response_data) {
                                     if (RAP < minRAP && await getFromStorageLocal("Under-RAP data") == true && proofBased == false) {
                                         belowRap = true
                                         amount = minRAP - RAP
+                                    }
+
+                                    if (!(RAP < minRAP) && !(RAP > nextMinRAP) && await getFromStorageLocal("Till raise data") == true && proofBased == false && canRaise) {
+                                        willRaise = true;
                                     }
                                 }
                             }
@@ -1614,8 +1630,10 @@ async function update_func(response_data) {
                                     const buttonHTML = `<button type="button" class="btn-control-md ng-binding sendButton">Send</button>`;
                                     let tradeButtons = document.getElementsByClassName('trade-buttons')[0];
                                     if (tradeButtons != null) {
-                                        tradeButtons.style.padding = "5px";
-                                        $(buttonHTML).insertAfter(tradeButtons.querySelector('[ng-click="counterTrade(data.trade)"]'));
+                                        if (document.getElementsByClassName('sendButton')[0] == null) {
+                                            tradeButtons.style.padding = "5px";
+                                            $(buttonHTML).insertAfter(tradeButtons.querySelector('[ng-click="counterTrade(data.trade)"]'));
+                                        }
                                         //tradeButtons.innerHTML += buttonHTML;
                                         let sendButton = tradeButtons.getElementsByClassName('sendButton')[0];
                                         sendButton.onclick = function () {
@@ -1856,6 +1874,8 @@ async function update_func(response_data) {
                                                 cost.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + displayvalue + "<br>" + "<span style='color:green'>" + String(amount).commafy() + " above" + "<span/>" + "<br/>" + "<br/>")
                                             } else if (belowRap == true) {
                                                 cost.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + displayvalue + "<br>" + "<span style='color:red'>" + String(amount).commafy() + " below" + "<span/>" + "<br/>" + "<br/>")
+                                            } else if (willRaise == true) {
+                                                cost.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + displayvalue + "<br>" + "<span style='color:gold'>" + String(toRaise).commafy() + " till raise" + "<span/>" + "<br/>" + "<br/>")
                                             } else {
                                                 cost.innerHTML += ("<br>" + "&nbsp&nbsp&nbsp&nbsp" + displayvalue + "<br/>")
                                             }
@@ -1872,7 +1892,7 @@ async function update_func(response_data) {
                                         img.style.position = 'absolute'
                                         img.style.height = '17px'
                                         img.style.width = '17px'
-                                        if (aboveRap == true || belowRap == true) {
+                                        if (aboveRap == true || belowRap == true || willRaise == true) {
                                             img.style.marginTop = "-66px";
                                         } else {
                                             img.style.marginTop = "-22px";
@@ -2190,41 +2210,43 @@ async function update_func(response_data) {
         if (sendmode == false) {
             if (await getFromStorageLocal("Total Win/Loss") == true) {
                 let tradebuttons = document.getElementsByClassName("trade-buttons")[0]
-                tradebuttons.querySelectorAll('.totalWin').forEach(e => e.remove());
-                let totalWin = document.createElement("p")
+                if (tradebuttons) {
+                    tradebuttons.querySelectorAll('.totalWin').forEach(e => e.remove());
+                    let totalWin = document.createElement("p")
 
-                totalWin.className = "totalWin"
-                totalWin.style.fontFamily = "HCo Gotham SSm,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif"
-                totalWin.style.fontWeight = "bold"
-                totalWin.style.fontSize = "20px"
-                totalWin.style.lineHeight = "1.8"
-                totalWin.style.position = "relative"
-                totalWin.style.display = "inline-block"
-                let amount = (total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, "")))
-                if (amount == 0) {
-                    amount = "="
-                } else {
-                    amount = String(amount).commafy()
-                    if (amount.search("-") == -1) {
-                        amount = "+" + amount
+                    totalWin.className = "totalWin"
+                    totalWin.style.fontFamily = "HCo Gotham SSm,Helvetica Neue,Helvetica,Arial,Lucida Grande,sans-serif"
+                    totalWin.style.fontWeight = "bold"
+                    totalWin.style.fontSize = "20px"
+                    totalWin.style.lineHeight = "1.8"
+                    totalWin.style.position = "relative"
+                    totalWin.style.display = "inline-block"
+                    let amount = (total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, "")))
+                    if (amount == 0) {
+                        amount = "="
+                    } else {
+                        amount = String(amount).commafy()
+                        if (amount.search("-") == -1) {
+                            amount = "+" + amount
+                        }
                     }
-                }
-                totalWin.innerHTML = amount
-                let colorElement = document.getElementsByClassName("paired-name ng-binding")[0]
-                let style = getComputedStyle(colorElement);
-                let color = style.color
-                totalWin.style.color = String(color)
-                totalWin.style.zIndex = 1001
+                    totalWin.innerHTML = amount
+                    let colorElement = document.getElementsByClassName("paired-name ng-binding")[0]
+                    let style = getComputedStyle(colorElement);
+                    let color = style.color
+                    totalWin.style.color = String(color)
+                    totalWin.style.zIndex = 1001
 
-                if ((total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, ""))) > 0) {
-                    totalWin.style.color = "green"
-                }
-                if ((total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, ""))) < 0) {
-                    totalWin.style.color = "red"
-                }
+                    if ((total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, ""))) > 0) {
+                        totalWin.style.color = "green"
+                    }
+                    if ((total_value2 + parseInt(robuxadded2.innerHTML.replace(/,/g, ""))) - (total_value1 + parseInt(robuxadded1.innerHTML.replace(/,/g, ""))) < 0) {
+                        totalWin.style.color = "red"
+                    }
 
-                tradebuttons.appendChild(totalWin)
-                addMouseOver(totalWin, iconMouseOverText[totalWin.className])
+                    tradebuttons.appendChild(totalWin)
+                    addMouseOver(totalWin, iconMouseOverText[totalWin.className])
+                }
             }
         }
     }
@@ -2430,7 +2452,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
                 }
 
                 let appendelement = document.getElementsByClassName("details-info")[0]
-                if (await getFromStorageLocal("User Profile RAP") == true) {
+                if (await getFromStorageLocal("User Profile RAP") == true && document.getElementsByClassName("rap-data")[0] == undefined) {
                     let hrefurl = "https://www.rolimons.com/player/" + thisUserId
                     let thishtmlrap = `<li class="to-be-removed-placeholder-rap"><div class="text-label font-caption-header">RAP</div><a userid="1429560605" target="_blank" class="value-data" href="' + hrefurl + '"><span class="font-header-2">' + "..." + '</span></a></li>`
                     appendelement.insertAdjacentHTML('beforeend', thishtmlrap);
@@ -2438,14 +2460,14 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
                     appendelement.insertAdjacentHTML('beforeend', thishtml);
                     document.getElementsByClassName("to-be-removed-placeholder-rap")[0].remove()
                 }
-                if (await getFromStorageLocal("User Profile Value") == true) {
+                if (await getFromStorageLocal("User Profile Value") == true && document.getElementsByClassName("value-data")[0] == undefined) {
                     let thishtmlvalue = `<img src="${icon}" style="height: 25px; width: 25px;margin-top:-3px;margin-right:5px;"><li class="to-be-removed-placeholder-value"><div class="text-label font-caption-header">Value</div><a userid="1429560605" target="_blank" class="value-data" href="' + hrefurl + '"><span class="font-header-2">' + "..." + '</span></a></li>`
                     appendelement.insertAdjacentHTML('beforeend', thishtmlvalue);
                     thishtml = '<li><div class="text-label font-caption-header">Value</div><a userid="1429560605" target="_blank" class="value-data" href="' + hrefurl + '"><span class="font-header-2">' + String(value).commafy() + '</span></a></li>'
                     appendelement.insertAdjacentHTML('beforeend', thishtml);
                     document.getElementsByClassName("to-be-removed-placeholder-value")[0].remove()
                 }
-                if (await getFromStorageLocal("User Profile Value") == true && await getFromStorageLocal("User Profile RAP") == true) {
+                if (await getFromStorageLocal("User Profile Value") == true && await getFromStorageLocal("User Profile RAP") == true && document.getElementsByClassName("details-actions desktop-action")[0]) {
                     document.getElementsByClassName("details-actions desktop-action")[0].style.margin = "-30px"
                 }
                 return
@@ -2477,7 +2499,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
             if (header != undefined && document.getElementById("valueProvider") == undefined && await getFromStorageLocal('Current Value Provider Display') == true) {
                 var h = document.createElement("h3");
                 h.id = "valueProvider"
-                var t = `<img src="${icons["primary-with-arrow"]}" style="height: 25px; width: 25px;margin-top:-3px;margin-right:5px;">Cracked by Shawn#2000                                                         Current Value Provider: ${request_response[2]}`
+                var t = `<img src="${icons["primary-with-arrow"]}" style="height: 25px; width: 25px;margin-top:-3px;margin-right:5px;">Current Value Provider: ${"&nbsp".repeat(4) + request_response[2]} \n Cracked by: Shawn#2000`
                 h.innerHTML = t
                 header.getElementsByTagName("h1")[0].parentElement.insertBefore(h, header.getElementsByTagName("h1")[0].nextSibling);
             }

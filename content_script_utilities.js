@@ -104,7 +104,7 @@ async function addITVIcon(tabId) {
 }
 
 async function CheckSubscription() {
-   return true
+    return true
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
@@ -255,7 +255,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
     if (request.command == "purchase_notification") {
         if (document.getElementById("account-security-prompt-container-itv") == null) {
-            let html = '<div class="alert-container" style="top:40px; z-index:1000000000000000000;position:absolute;width:100%"><div id="account-security-prompt-container-itv"></div><div class="alert-info linkify" style="display: block;"><span><span class="icon-boxes"><img class="icons_alert" style="height:48px; width:48px; margin: 0;position: absolute;top: 50%;-ms-transform: translateY(-50%);transform: translateY(-50%);margin-left:-50px;" src=""></span>Your <b><span class="icon-boxes"><img class="icons_ITV" height="28px" width="28px" src=""></span> In-Tab Values</b> subscription has been paid for by Shawn#2000 <br> Please <span class="text-link" target="_blank" style="cursor: pointer;">Click here to see Shawn#2000!.</span><div style="opacity:0.6;margin-right:10px;display:inline-block;margin-left:45px;cursor:pointer;" class="alert-close"><b> Close Alert<b></b></b></div></span></div></div>'
+            let html = '<div class="alert-container" style="top:40px; z-index:1000000000000000000;position:absolute;width:100%"><div id="account-security-prompt-container-itv"></div><div class="alert-info linkify" style="display: block;"><span><span class="icon-boxes"><img class="icons_alert" style="height:48px; width:48px; margin: 0;position: absolute;top: 50%;-ms-transform: translateY(-50%);transform: translateY(-50%);margin-left:-50px;" src=""></span>Your <b><span class="icon-boxes"><img class="icons_ITV" height="28px" width="28px" src=""></span> In-Tab Values</b> subscription needs to be activated before ITV will function. <br> Please <span class="text-link" target="_blank" style="cursor: pointer;">click here to purchase a subscription.</span><div style="opacity:0.6;margin-right:10px;display:inline-block;margin-left:45px;cursor:pointer;" class="alert-close"><b> Close Alert<b></b></b></div></span></div></div>'
             let element = document.getElementById("header")
             let div = document.createElement("div")
             div.innerHTML = html

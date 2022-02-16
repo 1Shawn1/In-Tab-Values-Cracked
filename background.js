@@ -41,7 +41,7 @@ async function playSound() {
 }
 
 async function GetUserId() {
-    let result = new Promise(async function(resolve, reject) {
+    let result = new Promise(async function (resolve, reject) {
 
         let url = "https://users.roblox.com/v1/users/authenticated"
         user_id = await sendGETRequest("https://users.roblox.com/v1/users/authenticated")
@@ -61,7 +61,7 @@ function get(url) {
         xhr.open('GET', url);
 
         // request state change event
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
 
             // request completed?
             if (xhr.readyState !== 4) return;
@@ -92,14 +92,14 @@ async function sendGETRequest(url) {
 }
 
 function sortObject(obj) {
-    return Object.keys(obj).sort().reduce(function(result, key) {
+    return Object.keys(obj).sort().reduce(function (result, key) {
         result[key] = obj[key];
         return result;
     }, {});
 }
 
 function Alert(alert) {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         let tab = tabs[0]
         console.log(tab.url)
         if (tab.url.indexOf("roblox.com/trades") != -1 || (tab.url.indexOf("roblox.com/users/") != -1 && tab.url.indexOf("/trade") != -1) || (tab.url.indexOf("roblox.com/users/") != -1 && tab.url.indexOf("/profile") != -1)) {
@@ -113,7 +113,7 @@ let previousAllValueData = null
 
 async function start(tab) {
     if (online == true) {
-        chrome.tabs.sendMessage(tab.id, { type: 'test' }, async function(isInjected) {
+        chrome.tabs.sendMessage(tab.id, { type: 'test' }, async function (isInjected) {
             console.log(isInjected)
             let newurl = `https://gist.githubusercontent.com/KDJDEV/9cf812eb64a35551caa02502c18d496f/raw/rare_values.json`
             if (Date.now() - lastWorkaround > 60000) {
@@ -182,8 +182,8 @@ async function start(tab) {
                 valueBrackets = await valueBrackets //do we need this?
                 window.user_id = await GetUserId(tab)
 
-                
-                let owned = true
+
+                let owned = await CheckSubscription()
 
                 if (owned == true) {
                     //VIP server is owned
@@ -198,7 +198,7 @@ async function start(tab) {
                             });
                         }
                         chrome.tabs.sendMessage(tab.id, { command: "add_itv_icon", tabId: tab.id });
-                    }else{
+                    } else {
                         chrome.tabs.sendMessage(tab.id, {
                             type: 'activate',
                             data: [valueData, valueBrackets, await getFromStorageLocal("Value Provider")]
@@ -220,7 +220,7 @@ async function start(tab) {
     };
 };
 
-chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
+chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, tab) {
     if (tab.url !== undefined && changeInfo.status == 'complete') {
         debounce = false
         start(tab)
@@ -230,12 +230,12 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
 function saveLocal(name, value) {
     var items = {};
     items[name] = value
-    chrome.storage.local.set(items, function() {});
+    chrome.storage.local.set(items, function () { });
 }
 
 async function getFromStorageLocal(name) {
     return new Promise((resolve, reject) => {
-        chrome.storage.local.get(name, async function(items) {
+        chrome.storage.local.get(name, async function (items) {
             value = items[name]
             if (value == undefined) {
                 let globalData = await getGlobalData()
@@ -285,17 +285,17 @@ function ObjectLength(object) {
 let waitTime = 1900
 let tradeCache = {}
 let restart = false
-async function caching2() {
-    tradeCache = await getFromStorageLocal("tradeCache")
-    if (tradeCache == null) {
-        tradeCache = {}
-    }
+function caching2() {
+    getFromStorageLocal("tradeCache").then((tradeCache) => {
+        if (tradeCache == null) {
+            tradeCache = {}
+        }
 
-    let getAllTrades = new Promise(function(resolve, reject) {
-        let allTrades = []
+        let getAllTrades = new Promise(function (resolve, reject) {
+            let allTrades = []
 
-        async function processPageCursor(pageCursor) {
-            try {
+            async function processPageCursor(pageCursor) {
+
                 fetch(`https://trades.roblox.com/v1/trades/Inbound?sortOrder=Asc&limit=100&cursor=${pageCursor}`)
                     .then(r => r.json().then(data => ({ status: r.status, body: data })))
                     .then(async data => {
@@ -323,75 +323,40 @@ async function caching2() {
                         await timer(waitTime);
                         processPageCursor(pageCursor);
                     });
-            } catch (e) {
-                waitTime = 7000
-                await timer(waitTime);
-                //console.log('retrying')
-                processPageCursor(pageCursor) //request failed, try again
+
             }
-        }
-        processPageCursor("")
-    })
-    getAllTrades.then(async (tradesData) => {
-        saveLocal("allTrades", tradesData)
-        function getRidOfOld(tradesData) {
-            for (const index in tradeCache) { //index is trade id
-                let cachedTrade = tradeCache[index]
-                if (cachedTrade !== null) {
-                    let value = tradesData.find(trade => trade.id == index)
-                    if (value === undefined || value === null) {
-                        console.log("deleted: ", tradeCache[index])
-                        delete tradeCache[index]
-                    }
-                }
-            }
-            saveLocal("tradeCache", tradeCache)
-        }
-        getRidOfOld(tradesData)
+            processPageCursor("")
+        })
+        getAllTrades.then(async (tradesData) => {
+            if (tradesData.length !== 0) {
 
-        tradeCache = await getFromStorageLocal("tradeCache")
-
-        var index = 0
-        async function loopFunction() { //loop through list of trades
-            let tradesDataTrade = tradesData[index]
-            let tradeId = tradesDataTrade.id
-
-            if (tradeCache[tradeId] == undefined) { //check to make sure trade doesn't already exist in cache
-                try {
-                    fetch(`https://trades.roblox.com/v1/trades/${tradeId}`)
-                        .catch(async function() {
-                            waitTime = 7000
-                            await timer(waitTime);
-                            if (index < tradesData.length) {
-                                if (restart == false) {
-                                    loopFunction()
-                                } else {
-                                    caching2()
-                                }
+                saveLocal("allTrades", tradesData)
+                function getRidOfOld(tradesData) {
+                    for (const index in tradeCache) { //index is trade id
+                        let cachedTrade = tradeCache[index]
+                        if (cachedTrade !== null) {
+                            let value = tradesData.find(trade => trade.id == index)
+                            if (value === undefined || value === null) {
+                                console.log("deleted: ", tradeCache[index])
+                                delete tradeCache[index]
                             }
-                        })
-                        .then(r => r.json().then(data => ({ status: r.status, body: data })))
-                        .then(async data => {
-                            tradeDataTrade = data.body
-                            if (data.status === 200) {
-                                tradeCache[tradeId] = tradeDataTrade //add newly discovered trade to cache
-                                console.log(Object.keys(tradeCache).length)
-                                saveLocal("tradeCache", tradeCache)
-                                chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-                                    chrome.tabs.sendMessage(tabs[0].id, { command: "tradeAdded"}, function(){});
-                                })
-                                waitTime = 1500
-                                await timer(waitTime);
-                                index++
-                                if (index < tradesData.length) {
-                                    if (restart == false) {
-                                        loopFunction()
-                                    } else {
-                                        caching2()
-                                    }
-                                }
-                            } else {
-                                console.log('rate limited')
+                        }
+                    }
+                    saveLocal("tradeCache", tradeCache)
+                }
+                getRidOfOld(tradesData)
+
+                tradeCache = await getFromStorageLocal("tradeCache")
+
+                var index = 0
+                async function loopFunction() { //loop through list of trades
+                    let tradesDataTrade = tradesData[index]
+                    let tradeId = tradesDataTrade.id
+
+                    if (tradeCache[tradeId] == undefined) { //check to make sure trade doesn't already exist in cache
+
+                        fetch(`https://trades.roblox.com/v1/trades/${tradeId}`)
+                            .catch(async function () {
                                 waitTime = 7000
                                 await timer(waitTime);
                                 if (index < tradesData.length) {
@@ -399,74 +364,129 @@ async function caching2() {
                                         loopFunction()
                                     } else {
                                         caching2()
+                                        return
                                     }
                                 }
+                            })
+                            .then(r => r.json().then(data => ({ status: r.status, body: data })))
+                            .then(async data => {
+                                tradeDataTrade = data.body
+                                if (data.status === 200) {
+                                    if (tradeDataTrade.status === "Open") {
+                                        tradeCache[tradeId] = tradeDataTrade //add newly discovered trade to cache
+                                        console.log(Object.keys(tradeCache).length)
+                                        saveLocal("tradeCache", tradeCache)
+                                        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                                            chrome.tabs.sendMessage(tabs[0].id, { command: "tradeAdded" }, function () { });
+                                        })
+                                        waitTime = 1500
+                                        await timer(waitTime);
+                                        index++
+                                        if (index < tradesData.length) {
+                                            if (restart == false) {
+                                                loopFunction()
+                                            } else {
+                                                caching2()
+                                                return
+                                            }
+                                        }
+                                    } else {
+                                        waitTime = 1500
+                                        await timer(waitTime);
+                                        index++
+                                        if (index < tradesData.length) {
+                                            if (restart == false) {
+                                                loopFunction()
+                                            } else {
+                                                caching2()
+                                                return
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    console.log('rate limited')
+                                    waitTime = 7000
+                                    await timer(waitTime);
+                                    if (index < tradesData.length) {
+                                        if (restart == false) {
+                                            loopFunction()
+                                        } else {
+                                            caching2()
+                                            return
+                                        }
+                                    }
+                                }
+                            });
+
+                    } else {
+                        await timer(50)
+                        index++
+                        //console.log('trade already cached, moving on')
+                        if (index < tradesData.length) {
+                            if (restart == false) {
+                                loopFunction()
+                            } else {
+                                await timer(waitTime);
+                                caching2()
+                                return
                             }
-                        });
-                } catch (err) {
-                    waitTime = 7000
-                    await timer(waitTime);
-                    //console.log('retrying')
-                    if (index < tradesData.length) {
-                        if (restart == false) {
-                            loopFunction()
-                        } else {
-                            caching2()
                         }
                     }
-                }
-            } else {
-                await timer(50)
-                index++
-                //console.log('trade already cached, moving on')
-                if (index < tradesData.length) {
-                    if (restart == false) {
-                        loopFunction()
-                    } else {
+
+                    if (index === tradesData.length - 1) { //minus one because the length returns number of objects starting count at one instead of 0 array index
+                        //loop finished
+                        getRidOfOld(tradesData)
+
+                        await timer(waitTime);
+                        //console.log('looped through all trades, refetch all trades')
                         caching2()
+                        return
                     }
                 }
-            }
 
-            if (index === tradesData.length - 1) { //minus one because the length returns number of objects starting count at one instead of 0 array index
-                //loop finished
-                getRidOfOld(tradesData)
+                if (restart == false) {
+                    if (tradesData.length !== 0) {
+                        loopFunction()
+                    } else {
+                        await timer(waitTime);
 
+                        caching2()
+                        return
+                    }
+                } else {
+                    caching2()
+                    return
+                }
+            } else {
                 await timer(waitTime);
-                //console.log('looped through all trades, refetch all trades')
+
                 caching2()
                 return
             }
-        }
-
-        if (restart == false) {
-            loopFunction()
-        } else {
-            caching2()
-        }
+        })
     })
 }
 caching2()
-chrome.tabs.onActivated.addListener(async function(tabId, changeInfo, tab) {
+chrome.tabs.onActivated.addListener(async function (tabId, changeInfo, tab) {
 
     chrome.tabs.query({
         currentWindow: true,
         active: true
-    }, function(tabs) {
+    }, function (tabs) {
         let tab = tabs[0];
         start(tab)
     });
 })
 
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
     if (request.command === "purchased") {
-        setTimeout(function() {
+        setTimeout(function () {
             chrome.tabs.query({
                 active: true,
                 currentWindow: true
-            }, function(tabs) {
+            }, function (tabs) {
                 chrome.tabs.sendMessage(tabs[0].id, {
                     command: "thanks_for_purchasing"
                 });
@@ -478,11 +498,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return true;
 });
 
-window.addEventListener('offline', function(e) {
+window.addEventListener('offline', function (e) {
     console.log('offline');
     online = false
 });
-window.addEventListener('online', function(e) {
+window.addEventListener('online', function (e) {
     console.log('online');
     online = true
 });
@@ -495,18 +515,28 @@ async function firstCheck() {
 firstCheck()
 
 function purchaseSequence() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, { command: "redirect", url: "discord://discordapp.com/users/580875147624579083" }, function() {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, { command: "redirect", url: "https://www.roblox.com/games/7466730072" }, function () {
+            chrome.tabs.onUpdated.addListener(function () {
+                let send2 = function () {
+                    setTimeout(function () {
+                        chrome.tabs.sendMessage(tabs[0].id, { command: "prompt_purchase" });
+                    }, 1000)
+                    chrome.tabs.onUpdated.removeListener(send2);
+                }
+                chrome.tabs.onUpdated.addListener(send2)
+
+            });
         });
     })
 }
 
 function cancelSequence() {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, { command: "redirect", url: "discord://discordapp.com/users/580875147624579083" }, function() {
-            let send = function() {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, { command: "redirect", url: "https://www.roblox.com/games/7466730072" }, function () {
+            let send = function () {
                 console.log('send cancel')
-                setTimeout(function() {
+                setTimeout(function () {
                     chrome.tabs.sendMessage(tabs[0].id, { command: "cancel_subscription" });
                 }, 1000)
                 chrome.tabs.onUpdated.removeListener(send);
@@ -525,7 +555,7 @@ function findWithAttr(array, attr, value) {
     return -1;
 }
 
-chrome.runtime.onMessage.addListener(async function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.command == 'purchaseSequence') {
         purchaseSequence()
     }

@@ -2,9 +2,9 @@
 "update_url": "https://clients2.google.com/service/update2/crx",
 
     "manifest_version": 2,
-    "name": "In-Tab Values - Cracked by Shawn#2000",
-    "version": "2.3",
-    "description": "Cracked by Shawn#2000 : discord://discordapp.com/users/580875147624579083",
+    "name": "In-Tab Values - The Roblox Trading Addon",
+    "version": "2.4",
+    "description": "Equipped with numerous features, In-Tab Values is the best tool to help Roblox traders make 𝗺𝗼𝗿𝗲 profit, 𝗺𝗼𝗿𝗲 efficiently.",
     "short_name": "ITV",
     "permissions": ["unlimitedStorage", "tabs", "storage", "*://*.roblox.com/*"],
     "content_scripts": [
